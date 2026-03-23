@@ -1,0 +1,169 @@
+.sm-root {
+  min-height: 100svh;
+  background: var(--paper);
+  padding-bottom: 80px;
+}
+
+.sm-header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  height: 54px;
+  display: flex; align-items: center;
+  max-width: 600px; margin: 0 auto;
+  width: 100%;
+}
+.sm-header h1 {
+  font-size: 1.05rem; font-weight: 700; color: var(--ink);
+}
+
+/* Tabs */
+.sm-tabs {
+  display: flex; gap: 0;
+  padding: 12px 16px;
+  max-width: 600px; margin: 0 auto;
+}
+.sm-tab {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 0.82rem; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--cream); color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sm-tab:first-child { border-radius: 8px 0 0 8px; }
+.sm-tab:last-child  { border-radius: 0 8px 8px 0; }
+.sm-tab:not(:first-child) { border-left: none; }
+.sm-tab--active {
+  background: var(--saffron); color: #fff; border-color: var(--saffron);
+}
+
+/* Main */
+.sm-main {
+  max-width: 600px; margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+.sm-loading {
+  display: flex; align-items: center; gap: 10px;
+  padding: 40px 0; color: var(--ink-soft); font-size: 0.9rem;
+}
+
+.sm-empty {
+  padding: 40px 0; text-align: center;
+  color: var(--ink-soft); font-size: 0.9rem;
+}
+
+/* Staff card */
+.sm-list { display: flex; flex-direction: column; gap: 10px; }
+
+.sm-card {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.sm-card--inactive { opacity: 0.7; }
+
+.sm-card-top {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px;
+}
+.sm-avatar {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--saffron-dim); color: var(--saffron);
+  font-size: 0.75rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.sm-info { flex: 1; min-width: 0; }
+.sm-name {
+  font-size: 0.95rem; font-weight: 700; color: var(--ink);
+}
+.sm-role { font-size: 0.78rem; color: var(--ink-soft); margin-top: 1px; }
+
+.sm-badge {
+  font-size: 0.7rem; font-weight: 700;
+  padding: 3px 8px; border-radius: 99px;
+  letter-spacing: 0.03em;
+}
+.sm-badge--terminated {
+  background: var(--red-bg); color: var(--red);
+}
+
+/* Meta */
+.sm-meta {
+  display: flex; flex-wrap: wrap; gap: 8px 16px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sm-meta-item { display: flex; flex-direction: column; gap: 1px; }
+.sm-meta-label {
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--ink-faint);
+}
+.sm-meta-value { font-size: 0.82rem; font-weight: 600; color: var(--ink-mid); }
+
+/* Actions */
+.sm-actions { display: flex; gap: 8px; }
+.sm-btn {
+  flex: 1; padding: 8px 0;
+  font-size: 0.82rem; font-weight: 700;
+  border-radius: 8px; border: 1.5px solid;
+  cursor: pointer; transition: all 0.15s;
+}
+.sm-btn--edit {
+  background: var(--saffron-dim); color: var(--saffron);
+  border-color: var(--saffron);
+}
+.sm-btn--edit:hover { background: var(--saffron); color: #fff; }
+.sm-btn--terminate {
+  background: var(--red-bg); color: var(--red);
+  border-color: var(--red);
+}
+.sm-btn--terminate:hover { background: var(--red); color: #fff; }
+.sm-btn--reactivate {
+  background: var(--green-bg); color: var(--green);
+  border-color: var(--green);
+}
+.sm-btn--reactivate:hover { background: var(--green); color: #fff; }
+
+/* Edit note */
+.sm-edit-note {
+  font-size: 0.8rem; color: var(--ink-soft);
+  background: var(--saffron-dim);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+
+/* Confirm text */
+.sm-confirm-text {
+  font-size: 0.9rem; color: var(--ink-mid); line-height: 1.5;
+}
+
+/* Danger button */
+.btn-danger {
+  padding: 10px 24px;
+  background: var(--red); color: #fff;
+  font-size: 0.9rem; font-weight: 700;
+  border: none; border-radius: 99px; cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-danger:hover:not(:disabled) { background: #a93226; }
+.btn-danger:disabled { opacity: 0.45; cursor: default; }
+
+.modal-sheet--confirm { max-height: 60svh; }
+.sm-terminate-error {
+  font-size: 0.82rem;
+  color: var(--red);
+  background: var(--red-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  line-height: 1.5;
+}

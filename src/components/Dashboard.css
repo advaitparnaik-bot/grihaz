@@ -1,0 +1,223 @@
+/* ── Grihaz Design Tokens ── */
+:root {
+  --saffron: #E8611A;
+  --saffron-light: #F4884A;
+  --saffron-dim: rgba(232, 97, 26, 0.12);
+  --cream: #FDF6EE;
+  --paper: #FAF3E8;
+  --ink: #1C1410;
+  --ink-mid: #4A3728;
+  --ink-soft: #8A7060;
+  --ink-faint: #C5B5A5;
+  --border: rgba(74, 55, 40, 0.12);
+  --green: #2D7A4F;
+  --green-bg: #EAF5EE;
+  --amber: #B35C00;
+  --amber-bg: #FEF3E2;
+  --red: #C0392B;
+  --red-bg: #FDECEA;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(28,20,16,0.08);
+  --shadow-lg: 0 8px 32px rgba(28,20,16,0.14);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', 'Noto Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Loading ── */
+.dash-loading {
+  min-height: 100svh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px; color: var(--ink-soft);
+  font-size: 0.9rem; background: var(--paper);
+}
+.dash-spinner {
+  width: 28px; height: 28px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--saffron);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Header ── */
+.dash-header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+}
+.dash-header-inner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: 54px;
+  max-width: 600px; margin: 0 auto;
+}
+.dash-brand {
+  display: flex; align-items: center; gap: 6px;
+  flex: 0 0 auto;
+}
+.dash-logo-glyph {
+  font-size: 1.5rem; line-height: 1;
+  color: var(--saffron);
+  font-family: 'Noto Sans Devanagari', serif;
+}
+.dash-wordmark {
+  font-size: 1.05rem; font-weight: 700;
+  letter-spacing: -0.02em; color: var(--ink);
+}
+.dash-home-chip {
+  flex: 1;
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--ink-soft);
+  text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-signout-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-soft); padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center;
+  transition: color 0.15s;
+}
+.dash-signout-btn:hover { color: var(--saffron); }
+
+/* ── Main ── */
+.dash-main {
+  max-width: 600px; margin: 0 auto;
+  padding: 20px 16px 120px;
+}
+
+/* ── Date row ── */
+.dash-date-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.dash-date-text {
+  font-size: 1.15rem; font-weight: 600;
+  color: var(--ink);
+}
+.dash-count-badge {
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--saffron);
+  background: var(--saffron-dim);
+  padding: 3px 10px; border-radius: 99px;
+}
+
+/* ── Section ── */
+.dash-section {
+  background: var(--cream);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.dash-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-section-head h2 {
+  font-size: 0.9rem; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* ── Save button ── */
+.btn-save {
+  font-size: 0.82rem; font-weight: 600;
+  padding: 6px 16px; border-radius: 99px;
+  border: none; cursor: pointer;
+  background: var(--saffron); color: #fff;
+  transition: background 0.2s, transform 0.1s;
+}
+.btn-save:hover:not(:disabled) { background: #c9530f; }
+.btn-save:active:not(:disabled) { transform: scale(0.96); }
+.btn-save:disabled { opacity: 0.45; cursor: default; }
+.btn-save--done { background: var(--green) !important; }
+
+/* ── Empty state ── */
+.dash-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.dash-empty-icon { font-size: 2.4rem; }
+.btn-link {
+  background: none; border: none; cursor: pointer;
+  color: var(--saffron); font-size: 0.9rem; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px;
+  padding: 0;
+}
+
+/* ── Staff list ── */
+.staff-list { padding: 8px 0; }
+.staff-list--muted { opacity: 0.65; }
+
+/* ── Off-day group ── */
+.dash-offday-group {
+  border-top: 1px solid var(--border);
+}
+.dash-offday-group summary {
+  padding: 12px 16px;
+  font-size: 0.82rem; font-weight: 600; color: var(--ink-soft);
+  cursor: pointer; user-select: none;
+  list-style: none;
+}
+.dash-offday-group summary::-webkit-details-marker { display: none; }
+
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: 24px; right: 20px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 22px;
+  background: var(--saffron);
+  color: #fff;
+  font-size: 0.9rem; font-weight: 700;
+  border: none; border-radius: 99px;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(232,97,26,0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+  z-index: 40;
+}
+.fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(232,97,26,0.45);
+}
+.fab:active { transform: scale(0.96); }
+
+/* ── No home ── */
+.dash-no-home {
+  min-height: 100svh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; text-align: center; padding: 24px;
+  color: var(--ink-mid); font-size: 0.95rem;
+}
+.btn-ghost {
+  background: none; border: 1.5px solid var(--border);
+  color: var(--ink-mid); padding: 8px 20px;
+  border-radius: 99px; cursor: pointer; font-size: 0.85rem;
+  transition: border-color 0.2s;
+}
+.btn-ghost:hover { border-color: var(--saffron); color: var(--saffron); }
+.dash-adhoc-btn {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 16px;
+  padding: 12px 20px;
+  width: 100%;
+  background: var(--cream);
+  border: 1.5px dashed var(--saffron);
+  border-radius: var(--radius);
+  color: var(--saffron);
+  font-size: 0.88rem; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dash-adhoc-btn:hover { background: var(--saffron-dim); }

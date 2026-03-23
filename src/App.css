@@ -182,3 +182,40 @@
     border-right-color: var(--border);
   }
 }
+/* ── App shell ── */
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+.app-content {
+  flex: 1;
+  padding-bottom: 64px; /* space for bottom nav */
+}
+
+/* ── Bottom Nav ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--cream);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 60;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.bnav-btn {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  background: none; border: none;
+  color: var(--ink-faint);
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.bnav-btn--active { color: var(--saffron); }
+.bnav-btn:hover:not(.bnav-btn--active) { color: var(--ink-soft); }

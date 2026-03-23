@@ -1,0 +1,70 @@
+.set-root { min-height: 100svh; background: var(--paper); padding-bottom: 80px; }
+
+.set-month-row {
+  display: flex; gap: 6px; padding: 12px 16px;
+  overflow-x: auto; background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  max-width: 600px; margin: 0 auto;
+}
+.set-month-btn {
+  white-space: nowrap; padding: 6px 14px;
+  font-size: 0.78rem; font-weight: 600;
+  border: 1.5px solid var(--border); border-radius: 99px;
+  background: var(--paper); color: var(--ink-mid);
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.set-month-btn--active { background: var(--saffron); color: #fff; border-color: var(--saffron); }
+
+.set-totals {
+  display: flex; align-items: center;
+  padding: 14px 16px; max-width: 600px; margin: 0 auto;
+  gap: 0;
+}
+.set-total-item { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.set-total-item:last-child { align-items: flex-end; }
+.set-total-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+.set-total-value { font-size: 1.1rem; font-weight: 800; }
+.set-total-value--outstanding { color: var(--amber); }
+.set-total-value--settled { color: var(--green); }
+.set-total-divider { width: 1px; height: 36px; background: var(--border); margin: 0 16px; }
+
+.set-main { max-width: 600px; margin: 0 auto; padding: 0 16px 24px; }
+.set-list { display: flex; flex-direction: column; gap: 10px; }
+
+.set-card {
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px;
+  box-shadow: var(--shadow);
+}
+.set-card--settled { opacity: 0.8; }
+
+.set-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+
+.set-badge {
+  font-size: 0.7rem; font-weight: 700;
+  padding: 3px 8px; border-radius: 99px;
+  letter-spacing: 0.03em; flex-shrink: 0;
+}
+.set-badge--settled { background: var(--green-bg); color: var(--green); }
+.set-badge--outstanding { background: var(--amber-bg); color: var(--amber); }
+
+.set-breakdown {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 0; border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); margin-bottom: 12px;
+}
+.set-breakdown-item {
+  display: flex; justify-content: space-between;
+  font-size: 0.82rem; color: var(--ink-mid);
+}
+.set-breakdown-item--total {
+  font-weight: 700; color: var(--ink); margin-top: 4px; padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.set-settled-info {
+  font-size: 0.78rem; color: var(--green); font-weight: 600;
+  text-align: center; padding: 6px 0;
+}
+
+.set-settle-btn { width: 100%; justify-content: center; }

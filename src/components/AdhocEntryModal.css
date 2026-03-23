@@ -1,0 +1,38 @@
+.adhoc-loading { font-size: 0.85rem; color: var(--ink-soft); }
+
+.adhoc-staff-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 180px; overflow-y: auto;
+}
+.adhoc-staff-btn {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--paper); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: all 0.15s; text-align: left;
+}
+.adhoc-staff-btn--active {
+  border-color: var(--saffron); background: var(--saffron-dim);
+}
+.adhoc-staff-name { font-size: 0.88rem; font-weight: 700; color: var(--ink); }
+.adhoc-staff-role { font-size: 0.75rem; color: var(--ink-soft); }
+
+.adhoc-toggle-row { display: flex; gap: 8px; }
+.adhoc-toggle-btn {
+  flex: 1; padding: 10px;
+  font-size: 0.85rem; font-weight: 700;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink-mid);
+  cursor: pointer; transition: all 0.15s;
+}
+.adhoc-toggle-btn--active {
+  background: var(--saffron); color: #fff; border-color: var(--saffron);
+}
+.adhoc-toggle-btn:disabled { opacity: 0.4; cursor: default; }
+
+.adhoc-rate-preview {
+  font-size: 0.85rem; color: var(--ink-mid);
+  background: var(--saffron-dim);
+  padding: 10px 14px; border-radius: var(--radius-sm);
+}
