@@ -107,7 +107,7 @@ export default function Dashboard() {
       <header className="dash-header">
         <div className="dash-header-inner">
           <div className="dash-brand">
-            <span className="dash-logo-glyph">गृ</span>
+            <span className="dash-logo-glyph">गृः</span>
             <span className="dash-wordmark">grihaz</span>
           </div>
           <div className="dash-home-chip">{home.name}</div>
