@@ -36,3 +36,7 @@
   background: var(--saffron-dim);
   padding: 10px 14px; border-radius: var(--radius-sm);
 }
+.adhoc-staff-btn--add {
+  border-style: dashed;
+  color: var(--color-primary, #E8611A);
+}
