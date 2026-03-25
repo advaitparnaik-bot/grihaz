@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import AddStaffModal from './AddStaffModal'
 import './AdhocEntryModal.css'
 
 export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
   const [staff, setStaff] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [showAddStaff, setShowAddStaff] = useState(false)
 
   const [form, setForm] = useState({
     staff_id: '',
     work_description: '',
-    has_payment: null,        // true | false
-    payment_type: '',         // 'contract' | 'custom' | 'reimbursement'
+    has_payment: null,
+    payment_type: '',
     custom_amount: '',
-    settlement: '',           // 'now' | 'salary_cycle'
-    settlement_mode: '',      // 'cash' | 'upi'
+    settlement: '',
+    settlement_mode: '',
     date: new Date().toISOString().split('T')[0],
   })
   const [errors, setErrors] = useState({})
@@ -32,6 +34,24 @@ export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
     setLoading(false)
   }
 
+  async function handleStaffAdded() {
+    // Reload staff list, then auto-select the newest staff member
+    const { data } = await supabase
+      .from('staff')
+      .select('id, name, role, pay_type, daily_rate, monthly_rate, staff_type')
+      .eq('home_id', homeId)
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+    const updated = data || []
+    setStaff(updated.sort((a, b) => a.name.localeCompare(b.name)))
+    // Auto-select the most recently created staff
+    if (updated.length > 0) {
+      setForm(p => ({ ...p, staff_id: updated[0].id }))
+      setErrors(p => ({ ...p, staff_id: undefined }))
+    }
+    setShowAddStaff(false)
+  }
+
   function set(field, value) {
     setForm(p => ({ ...p, [field]: value }))
     setErrors(p => ({ ...p, [field]: undefined }))
@@ -41,7 +61,7 @@ export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
     if (!staffMember) return null
     if (staffMember.pay_type === 'per_day') return staffMember.daily_rate
     if (staffMember.pay_type === 'fixed_monthly') return staffMember.monthly_rate
-      ? Math.round(staffMember.monthly_rate / 26) // approx working days
+      ? Math.round(staffMember.monthly_rate / 26)
       : null
     return null
   }
@@ -106,6 +126,17 @@ export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
     setSaving(false)
   }
 
+  // Show AddStaffModal on top
+  if (showAddStaff) {
+    return (
+      <AddStaffModal
+        homeId={homeId}
+        onClose={() => setShowAddStaff(false)}
+        onAdded={handleStaffAdded}
+      />
+    )
+  }
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-sheet">
@@ -141,6 +172,13 @@ export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
                     <span className="adhoc-staff-role">{s.role || (s.staff_type === 'adhoc' ? 'Adhoc' : '—')}</span>
                   </button>
                 ))}
+                {/* Add new staff option */}
+                <button type="button"
+                  className="adhoc-staff-btn adhoc-staff-btn--add"
+                  onClick={() => setShowAddStaff(true)}>
+                  <span className="adhoc-staff-name">+ Add New Staff</span>
+                  <span className="adhoc-staff-role">Create a new staff member</span>
+                </button>
               </div>
             )}
             {errors.staff_id && <span className="field-error">{errors.staff_id}</span>}
@@ -201,7 +239,6 @@ export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
                 {errors.payment_type && <span className="field-error">{errors.payment_type}</span>}
               </div>
 
-              {/* Amount */}
               {(form.payment_type === 'custom' || form.payment_type === 'reimbursement') && (
                 <div className="form-field">
                   <label>Amount (₹) <span className="req">*</span></label>
@@ -219,7 +256,6 @@ export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
                 </div>
               )}
 
-              {/* Settlement */}
               {form.payment_type && (
                 <div className="form-field">
                   <label>Settlement <span className="req">*</span></label>
@@ -235,7 +271,6 @@ export default function AdhocEntryModal({ homeId, onClose, onAdded }) {
                 </div>
               )}
 
-              {/* Mode */}
               {form.settlement === 'now' && (
                 <div className="form-field">
                   <label>Mode <span className="req">*</span></label>
