@@ -110,3 +110,10 @@
 | Settlement recording | In MVP | Needed for complete payroll flow |
 | RLS policies | Permissive for authenticated users | To be tightened before public launch |
 | Laundry tracker | Phase 2 | After core attendance and payroll stable |
+## User Profile Page
+**Status:** Parked — Post-MVP
+
+Full profile page (name, phone, address) for each home member. 
+Audit trail (who created which entry) already exists via `created_by` 
+field on all tables. Surface this in the UI and build full profile 
+management in Phase 2 once multi-member usage is validated.
