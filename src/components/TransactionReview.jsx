@@ -211,6 +211,7 @@ export default function TransactionReview() {
                 <div className="tr-card-left">
                   <div className="tr-date">{new Date(e.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
                   <div className={`tr-dot tr-dot--${e.settled ? 'settled' : 'outstanding'}`} />
+                  {e.type === 'adhoc' && <span className="tr-adhoc-tag">Adhoc</span>}
                 </div>
                 <div className="tr-card-body">
                   <div className="tr-staff">{e.staff_name}{e.staff_role ? ` · ${e.staff_role}` : ''}</div>

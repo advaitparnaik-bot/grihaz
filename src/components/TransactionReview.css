@@ -84,3 +84,10 @@
 }
 .tr-status--settled { background: var(--green-bg); color: var(--green); }
 .tr-status--outstanding { background: var(--amber-bg); color: var(--amber); }
+.tr-adhoc-tag {
+  font-size: 0.55rem; font-weight: 700;
+  padding: 1px 4px; border-radius: 4px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  background: var(--saffron-dim); color: var(--saffron);
+  text-align: center;
+}
