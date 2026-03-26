@@ -7,6 +7,7 @@ import StaffManagement from './components/StaffManagement'
 import TransactionReview from './components/TransactionReview'
 import Settlement from './components/Settlement'
 import './App.css'
+import JoinHome from './pages/JoinHome'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -16,6 +17,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
 
   useEffect(() => {
+    // Save invite token to localStorage before auth redirect clears the URL
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('token')
+  if (token) localStorage.setItem('invite_token', token)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) fetchHome(session.user.id)
@@ -40,7 +45,14 @@ export default function App() {
 
   if (loading || homeLoading) return null
   if (!session) return <Login />
-  if (!home) return <CreateHome user={session.user} onHomeCreated={setHome} />
+  const params = new URLSearchParams(window.location.search)
+  const inviteToken = params.get('token') || localStorage.getItem('invite_token')
+
+  if (!home) {
+  if (inviteToken) return <JoinHome token={inviteToken} user={session.user} onJoined={(home) => { localStorage.removeItem('invite_token'); setHome(home) }} />
+  return <CreateHome user={session.user} onHomeCreated={setHome} />
+  }
+  
 
   return (
     <div className="app-root">
