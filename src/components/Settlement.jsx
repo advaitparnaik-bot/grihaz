@@ -7,9 +7,9 @@ function getMonthOptions() {
   const today = new Date()
   for (let i = 0; i < 6; i++) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
-const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`
-options.push({
-  value: val,
+    const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`
+    options.push({
+      value: val,
       label: d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
     })
   }
@@ -20,20 +20,51 @@ function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate()
 }
 
-function calcPayout(staff, contract, presentDays, absentPaidDays, adhocTotal) {
+// Count actual occurrences of scheduled days in a specific month
+// e.g. Jitender (Thursday only) — March 2026 has 4 Thursdays, April has 5
+function getScheduledDaysInMonth(schedule, year, month) {
+  if (!schedule || schedule.length === 0) {
+    return getDaysInMonth(year, month)
+  }
+  const dayNameToIndex = {
+    sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+    thursday: 4, friday: 5, saturday: 6
+  }
+  const scheduledIndices = new Set(
+    schedule
+      .map(d => dayNameToIndex[d.toLowerCase()])
+      .filter(d => d !== undefined)
+  )
+  const daysInMonth = getDaysInMonth(year, month)
+  let count = 0
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayOfWeek = new Date(year, month, day).getDay()
+    if (scheduledIndices.has(dayOfWeek)) count++
+  }
+  return count
+}
+
+// Pay only for days earned — unmarked days are ignored entirely
+// payPerDay = monthly_rate / scheduledDaysInMonth (respects actual schedule for that month)
+// payout = payPerDay × (present + absentPaid) + adhocTotal
+function calcPayout(contract, presentDays, absentPaidDays, adhocTotal, year, month) {
   if (!contract) return adhocTotal || 0
+
   if (contract.pay_type === 'per_day') {
     return (presentDays * (contract.daily_rate || 0)) + (adhocTotal || 0)
   }
+
   if (contract.pay_type === 'fixed_monthly') {
-    const scheduledDaysInMonth = contract.schedule?.length 
-      ? contract.schedule.length * 4 
-      : 26
-    const deductPerDay = (contract.monthly_rate || 0) / scheduledDaysInMonth
-    const absentUnpaidDays = Math.max(0, scheduledDaysInMonth - presentDays - absentPaidDays)
-    return Math.max(0, Math.round((contract.monthly_rate || 0) - (deductPerDay * absentUnpaidDays))) + (adhocTotal || 0)
+    const scheduledDaysInMonth = getScheduledDaysInMonth(contract.schedule, year, month)
+    const payPerDay = (contract.monthly_rate || 0) / scheduledDaysInMonth
+    return Math.round(payPerDay * (presentDays + absentPaidDays)) + (adhocTotal || 0)
   }
+
   return adhocTotal || 0
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
 function initials(name) {
@@ -46,7 +77,7 @@ export default function Settlement() {
   const [homeId, setHomeId] = useState(null)
   const [staffSummaries, setStaffSummaries] = useState([])
   const [loading, setLoading] = useState(true)
-  const [settling, setSettling] = useState(null) // staff_id being settled
+  const [settling, setSettling] = useState(null)
   const [settleForm, setSettleForm] = useState({ amount: '', mode: 'cash' })
   const [saving, setSaving] = useState(false)
 
@@ -67,10 +98,9 @@ export default function Settlement() {
       const month = monthDate.getMonth()
       const firstDay = selectedMonth
       const lastDayDate = new Date(year, month + 1, 0)
-const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1).padStart(2,'0')}-${String(lastDayDate.getDate()).padStart(2,'0')}`
-      const totalDays = getDaysInMonth(year, month)
+      const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1).padStart(2,'0')}-${String(lastDayDate.getDate()).padStart(2,'0')}`
 
-      // Active staff
+      // Active regular staff
       const { data: staffData } = await supabase.from('staff')
         .select('*').eq('home_id', homeId).eq('active', true).eq('staff_type', 'regular')
 
@@ -87,7 +117,7 @@ const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1)
         .select('staff_id, status, date').eq('home_id', homeId)
         .gte('date', firstDay).lte('date', lastDay)
 
-      // Unsettled adhoc entries for month
+      // Adhoc entries on salary cycle for month
       const { data: adhoc } = await supabase.from('adhoc_entries')
         .select('staff_id, amount, type, settled').eq('home_id', homeId)
         .gte('date', firstDay).lte('date', lastDay)
@@ -100,12 +130,21 @@ const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1)
       const summaries = staffData.map(staff => {
         const contract = contracts?.find(c => c.staff_id === staff.id) || null
         const staffAtt = attendance?.filter(a => a.staff_id === staff.id) || []
+
         const presentDays = staffAtt.filter(a => a.status === 'present').length
-        const absentPaidDays = staffAtt.filter(a => a.status === 'absent_paid').length
+
+        const absentPaidEntries = staffAtt.filter(a => a.status === 'absent_paid')
+        const absentPaidDays = absentPaidEntries.length
+        const absentPaidDates = absentPaidEntries.map(a => formatDate(a.date))
+
+        const absentUnpaidEntries = staffAtt.filter(a => a.status === 'absent_unpaid')
+        const absentUnpaidDays = absentUnpaidEntries.length
+        const absentUnpaidDates = absentUnpaidEntries.map(a => formatDate(a.date))
+
         const staffAdhoc = adhoc?.filter(a => a.staff_id === staff.id) || []
         const adhocTotal = staffAdhoc.reduce((sum, a) => sum + (a.amount || 0), 0)
 
-        const payout = calcPayout(staff, contract, presentDays, absentPaidDays, adhocTotal)
+        const payout = calcPayout(contract, presentDays, absentPaidDays, adhocTotal, year, month)
         const settlement = settlements?.find(s => s.staff_id === staff.id)
 
         return {
@@ -113,6 +152,9 @@ const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1)
           contract,
           presentDays,
           absentPaidDays,
+          absentPaidDates,
+          absentUnpaidDays,
+          absentUnpaidDates,
           adhocTotal,
           payout: Math.round(payout),
           settlement: settlement || null,
@@ -213,16 +255,38 @@ const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1)
                     <span>Days present</span>
                     <span>{summary.presentDays}</span>
                   </div>
-                  <div className="set-breakdown-item">
-                    <span>Absent (paid)</span>
-                    <span>{summary.absentPaidDays}</span>
-                  </div>
+
+                  {summary.absentPaidDays > 0 && (
+                    <div className="set-breakdown-item">
+                      <span>
+                        Absent (paid)
+                        {summary.absentPaidDates.length > 0 && (
+                          <span className="set-dates"> ({summary.absentPaidDates.join(', ')})</span>
+                        )}
+                      </span>
+                      <span>{summary.absentPaidDays}</span>
+                    </div>
+                  )}
+
+                  {summary.absentUnpaidDays > 0 && (
+                    <div className="set-breakdown-item set-breakdown-item--deduction">
+                      <span>
+                        Absent (unpaid)
+                        {summary.absentUnpaidDates.length > 0 && (
+                          <span className="set-dates"> ({summary.absentUnpaidDates.join(', ')})</span>
+                        )}
+                      </span>
+                      <span>−{summary.absentUnpaidDays}</span>
+                    </div>
+                  )}
+
                   {summary.adhocTotal > 0 && (
                     <div className="set-breakdown-item">
                       <span>Adhoc (salary cycle)</span>
                       <span>₹{summary.adhocTotal.toLocaleString('en-IN')}</span>
                     </div>
                   )}
+
                   <div className="set-breakdown-item set-breakdown-item--total">
                     <span>Total Payable</span>
                     <span>₹{summary.payout.toLocaleString('en-IN')}</span>

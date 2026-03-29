@@ -91,3 +91,32 @@
   background: var(--saffron-dim); color: var(--saffron);
   text-align: center;
 }
+.tr-card--tappable { cursor: pointer; transition: background 0.15s; }
+.tr-card--tappable:hover { background: var(--paper); }
+
+.tr-edit-hint {
+  font-size: 0.6rem; color: var(--ink-soft);
+  letter-spacing: 0.03em; margin-top: 2px;
+}
+
+.tr-edit-meta {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 14px; background: var(--paper);
+  border-radius: var(--radius-sm); margin-bottom: 4px;
+}
+.tr-edit-meta-name { font-size: 0.88rem; font-weight: 700; color: var(--ink); display: block; }
+.tr-edit-meta-date { font-size: 0.75rem; color: var(--ink-soft); display: block; }
+
+.tr-delete-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--red); font-size: 0.8rem; font-weight: 600;
+  padding: 8px 0; text-align: left;
+  margin-top: 8px;
+}
+.tr-delete-confirm { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.tr-delete-confirm p { font-size: 0.85rem; color: var(--red); font-weight: 600; margin: 0; }
+.tr-delete-confirm-btn {
+  padding: 10px 20px; background: var(--red); color: #fff;
+  font-size: 0.88rem; font-weight: 700; border: none;
+  border-radius: 99px; cursor: pointer;
+}
