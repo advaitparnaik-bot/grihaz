@@ -4,7 +4,7 @@ import AttendanceRow from './AttendanceRow'
 import AdhocEntryModal from './AdhocEntryModal'
 import './Dashboard.css'
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigate }) {
   const [home, setHome] = useState(null)
   const [staff, setStaff] = useState([])
   const [attendance, setAttendance] = useState({})
@@ -76,23 +76,6 @@ export default function Dashboard() {
   }
 
   async function handleSignOut() { await supabase.auth.signOut() }
-  async function handleInvite() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data, error } = await supabase
-      .from('home_invites')
-      .insert({ home_id: home.id, created_by: user.id })
-      .select('token')
-      .single()
-    if (error) throw error
-    const link = `${window.location.origin}/?token=${data.token}`
-    await navigator.clipboard.writeText(link)
-    alert('Invite link copied to clipboard!')
-  } catch (err) {
-    console.error('Invite error:', err)
-    alert('Failed to generate invite link.')
-  }
-}
 
   const todayFull = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
   const todayShort = today.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase()
@@ -128,12 +111,12 @@ export default function Dashboard() {
             <span className="dash-wordmark">grihaz</span>
           </div>
           <div className="dash-home-chip">{home.name}</div>
-          <button className="dash-invite-btn" onClick={handleInvite} title="Invite member">
+          <button className="dash-invite-btn" onClick={() => onNavigate('home_management')} title="Manage home">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
-              <line x1="19" y1="8" x2="19" y2="14"/>
-              <line x1="22" y1="11" x2="16" y2="11"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </button>
           <button className="dash-signout-btn" onClick={handleSignOut} title="Sign out">

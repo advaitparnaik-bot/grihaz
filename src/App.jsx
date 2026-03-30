@@ -8,6 +8,7 @@ import TransactionReview from './components/TransactionReview'
 import Settlement from './components/Settlement'
 import './App.css'
 import JoinHome from './pages/JoinHome'
+import HomeManagement from './components/HomeManagement'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -57,7 +58,8 @@ export default function App() {
   return (
     <div className="app-root">
       <div className="app-content">
-        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
+        {activeTab === 'home_management' && <HomeManagement onBack={() => setActiveTab('dashboard')} />}
         {activeTab === 'staff' && <StaffManagement />}
         {activeTab === 'transactions' && <TransactionReview />}
         {activeTab === 'settlement' && <Settlement />}

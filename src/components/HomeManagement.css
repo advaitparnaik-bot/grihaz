@@ -1,0 +1,124 @@
+.hm-root {
+  min-height: 100svh;
+  background: var(--paper);
+  padding-bottom: 40px;
+}
+
+.hm-header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: 54px;
+  max-width: 600px; margin: 0 auto;
+}
+
+.hm-back-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-soft); padding: 4px;
+  border-radius: 6px; display: flex; align-items: center;
+  transition: color 0.15s;
+}
+.hm-back-btn:hover { color: var(--ink); }
+
+.hm-header h1 {
+  font-size: 1.05rem; font-weight: 700; color: var(--ink);
+}
+
+.hm-main {
+  max-width: 600px; margin: 0 auto;
+  padding: 20px 16px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+
+.hm-section {
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.hm-section-label {
+  font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+/* Home name row */
+.hm-info-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px;
+}
+.hm-home-icon { font-size: 1.2rem; }
+.hm-home-name { font-size: 0.95rem; font-weight: 700; color: var(--ink); }
+
+/* My name */
+.hm-name-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px;
+  cursor: pointer; transition: background 0.15s;
+}
+.hm-name-row:hover { background: var(--paper); }
+.hm-name-value { font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+.hm-name-empty { color: var(--ink-soft); font-weight: 400; font-style: italic; }
+
+.hm-name-edit {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.hm-name-input {
+  width: 100%; padding: 10px 14px;
+  font-size: 0.95rem; color: var(--ink);
+  background: var(--paper); border: 1.5px solid var(--saffron);
+  border-radius: var(--radius-sm); outline: none;
+  font-family: inherit;
+}
+.hm-name-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+
+/* Members list */
+.hm-members-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.hm-member-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.hm-member-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--saffron-dim); color: var(--saffron);
+  font-size: 0.75rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.hm-member-info { flex: 1; min-width: 0; }
+.hm-member-name {
+  font-size: 0.88rem; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 6px;
+}
+.hm-member-role { font-size: 0.75rem; color: var(--ink-soft); margin-top: 2px; }
+.hm-you-badge {
+  font-size: 0.6rem; font-weight: 700;
+  background: var(--saffron-dim); color: var(--saffron);
+  padding: 1px 6px; border-radius: 99px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.hm-remove-btn {
+  background: none; border: 1.5px solid var(--red);
+  color: var(--red); font-size: 0.75rem; font-weight: 700;
+  padding: 4px 10px; border-radius: 99px; cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.hm-remove-btn:hover { background: var(--red); color: #fff; }
+
+/* Invite button */
+.hm-invite-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 14px;
+  background: var(--cream); border: 1.5px dashed var(--saffron);
+  border-radius: var(--radius); color: var(--saffron);
+  font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  transition: background 0.15s;
+}
+.hm-invite-btn:hover { background: var(--saffron-dim); }
