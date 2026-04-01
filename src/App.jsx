@@ -37,12 +37,21 @@ export default function App() {
 
   async function fetchHome(userId) {
     setHomeLoading(true)
-    const { data } = await supabase.from('home_members')
-      .select('home_id, homes(id, name)').eq('user_id', userId).single()
-    setHome(data?.homes || null)
-    setHomeLoading(false)
-    setLoading(false)
-  }
+    const { data, error } = await supabase.from('home_members')
+      .select('home_id, homes(id, name)')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('fetchHome error:', error.message)
+      setHome(null)
+    } else {
+      setHome(data?.homes || null)
+    }
+
+  setHomeLoading(false)
+  setLoading(false)
+}
 
   if (loading || homeLoading) return null
   if (!session) return <Login />

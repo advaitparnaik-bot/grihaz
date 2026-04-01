@@ -117,3 +117,22 @@ Full profile page (name, phone, address) for each home member.
 Audit trail (who created which entry) already exists via `created_by` 
 field on all tables. Surface this in the UI and build full profile 
 management in Phase 2 once multi-member usage is validated.
+
+## Product Vision Expansion — Household Expense Tracking
+**Status:** Parked — Phase 3+
+
+Grihaz to expand beyond staff management into a full home productivity 
+and expense tracking platform. 
+
+**Grocery & Food Delivery Module (Phase 3):**
+- Track online grocery orders — Blinkit, Instamart, Zepto, BigBasket, MilkBasket
+- Per order: platform, date, items (name + qty + price), order total
+- Per food delivery order: platform (Swiggy/Zomato), date, items, total
+- Monthly spend summary per platform and category
+- Shared across home members
+
+**Long-term vision:**
+- All household expenses in one place — staff, groceries, food delivery, 
+  utilities, maintenance
+- Monthly household P&L view
+- Spend trends and insights
