@@ -176,7 +176,7 @@ body {
 
 /* ── FAB ── */
 .fab {
-  position: fixed; bottom: 24px; right: 20px;
+  position: fixed; bottom: calc(72px + env(safe-area-inset-bottom)); right: 20px;
   display: flex; align-items: center; gap: 8px;
   padding: 14px 22px;
   background: var(--saffron);
