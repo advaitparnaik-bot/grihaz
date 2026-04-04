@@ -8,25 +8,26 @@ export default function Login() {
   const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    })
+  const redirectTo = import.meta.env.VITE_APP_URL || window.location.origin
 
-    if (error) {
-  setError(JSON.stringify(error))
-  setLoading(false)
-}
-    } else {
-      setSent(true)
-      setLoading(false)
-    }
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: redirectTo,
+    },
+  })
+
+  if (error) {
+    setError(JSON.stringify(error))
+    setLoading(false)
+  } else {
+    setSent(true)
+    setLoading(false)
+  }
   }
 
   return (
