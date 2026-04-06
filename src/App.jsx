@@ -10,6 +10,7 @@ import Profile from './components/Profile'
 import './App.css'
 import JoinHome from './pages/JoinHome'
 import HomeManagement from './components/HomeManagement'
+import { useGmailCallback } from './lib/gmailCallback'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -18,6 +19,7 @@ export default function App() {
   const [homeLoading, setHomeLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [showProfile, setShowProfile] = useState(false)   // ← NEW
+  useGmailCallback()     
 
   useEffect(() => {
     // Save invite token to localStorage before auth redirect clears the URL

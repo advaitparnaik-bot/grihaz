@@ -1,38 +1,33 @@
 // supabase/functions/gmail-sync/index.ts
 // Grihaz — Gmail Sync Edge Function
-// Handles Gmail OAuth token exchange, email fetching,
-// Anthropic extraction, deduplication, and saving to Supabase.
 //
-// Endpoints:
-//   POST /gmail-sync          { action: 'connect', code, home_id }
-//   POST /gmail-sync          { action: 'sync', home_id }
-//   POST /gmail-sync          { action: 'disconnect', home_id }
-//   POST /gmail-sync          { action: 'status', home_id }
+// Endpoints (all POST):
+//   { action: 'connect',    code, home_id }           — OAuth callback, store tokens, first sync
+//   { action: 'sync',       home_id }                 — sync calling user's Gmail
+//   { action: 'sync-all',   home_id }                 — sync ALL members' Gmail (pg_cron)
+//   { action: 'disconnect', home_id }                 — remove calling user's connection
+//   { action: 'status',     home_id }                 — check calling user's connection status
 //
-// Secrets required (set in Supabase Edge Function Secrets):
-//   ANTHROPIC_API_KEY
-//   GOOGLE_CLIENT_ID
-//   GOOGLE_CLIENT_SECRET
-//   APP_URL
-//
-// Built-in Supabase secrets (automatic, no setup needed):
-//   SUPABASE_URL
-//   SUPABASE_SERVICE_ROLE_KEY
+// Secrets required:
+//   ANTHROPIC_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_URL
+// Built-in (automatic):
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// ─── Config ──────────────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 
-const SUPABASE_URL            = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const ANTHROPIC_API_KEY       = Deno.env.get('ANTHROPIC_API_KEY')!
-const GOOGLE_CLIENT_ID        = Deno.env.get('GOOGLE_CLIENT_ID')!
-const GOOGLE_CLIENT_SECRET    = Deno.env.get('GOOGLE_CLIENT_SECRET')!
-const APP_URL                 = Deno.env.get('APP_URL')!
+const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const SUPABASE_ANON_KEY    = Deno.env.get('SUPABASE_ANON_KEY')!
+const ANTHROPIC_API_KEY    = Deno.env.get('ANTHROPIC_API_KEY')!
+const GOOGLE_CLIENT_ID     = Deno.env.get('GOOGLE_CLIENT_ID')!
+const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET')!
+const APP_URL              = Deno.env.get('APP_URL')!
 
-const GMAIL_REDIRECT_URI      = `${APP_URL}/auth/gmail/callback`
-const GMAIL_TOKEN_URL         = 'https://oauth2.googleapis.com/token'
-const GMAIL_API_BASE          = 'https://gmail.googleapis.com/gmail/v1/users/me'
+const GMAIL_REDIRECT_URI   = `${APP_URL}/auth/gmail/callback`
+const GMAIL_TOKEN_URL      = 'https://oauth2.googleapis.com/token'
+const GMAIL_API_BASE       = 'https://gmail.googleapis.com/gmail/v1/users/me'
 
 const KNOWN_SENDERS = [
   'no-reply@blinkit.com',
@@ -44,7 +39,7 @@ const KNOWN_SENDERS = [
   'auto-confirm@amazon.in',
 ]
 
-// ─── CORS Headers ────────────────────────────────────────────────────────────
+// ─── CORS ─────────────────────────────────────────────────────────────────────
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -52,15 +47,21 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, content-type',
 }
 
-// ─── Supabase admin client ────────────────────────────────────────────────────
+// ─── Supabase clients ──────────────────────────────────────────────────────────
 
-function getSupabase() {
+function getAdminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
     auth: { persistSession: false }
   })
 }
 
-// ─── Google OAuth helpers ─────────────────────────────────────────────────────
+function getUserClient(authHeader: string) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } }
+  })
+}
+
+// ─── Google OAuth ─────────────────────────────────────────────────────────────
 
 async function exchangeCodeForTokens(code: string) {
   const res = await fetch(GMAIL_TOKEN_URL, {
@@ -74,14 +75,11 @@ async function exchangeCodeForTokens(code: string) {
       grant_type:    'authorization_code',
     }),
   })
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Token exchange failed: ${err}`)
-  }
+  if (!res.ok) throw new Error(`Token exchange failed: ${await res.text()}`)
   return res.json()
 }
 
-async function refreshAccessToken(refreshToken: string) {
+async function refreshAccessToken(refreshToken: string): Promise<string> {
   const res = await fetch(GMAIL_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -92,42 +90,35 @@ async function refreshAccessToken(refreshToken: string) {
       grant_type:    'refresh_token',
     }),
   })
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Token refresh failed: ${err}`)
-  }
+  if (!res.ok) throw new Error(`Token refresh failed: ${await res.text()}`)
   const data = await res.json()
-  return data.access_token as string
+  return data.access_token
 }
 
-// ─── Gmail API helpers ────────────────────────────────────────────────────────
+// ─── Gmail API ────────────────────────────────────────────────────────────────
 
 function buildGmailQuery(daysBack: number): string {
-  const after    = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000)
-  const dateStr  = after.toISOString().split('T')[0].replace(/-/g, '/')
-  const from     = KNOWN_SENDERS.map(s => `from:${s}`).join(' OR ')
+  const after   = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000)
+  const dateStr = after.toISOString().split('T')[0].replace(/-/g, '/')
+  const from    = KNOWN_SENDERS.map(s => `from:${s}`).join(' OR ')
   return `(${from}) after:${dateStr}`
 }
 
 async function searchEmails(accessToken: string, query: string, maxResults = 50) {
   const url = `${GMAIL_API_BASE}/messages?q=${encodeURIComponent(query)}&maxResults=${maxResults}`
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
   if (!res.ok) throw new Error(`Gmail search failed: ${res.status}`)
   const data = await res.json()
   return (data.messages || []) as { id: string }[]
 }
 
 async function fetchEmailBody(accessToken: string, messageId: string): Promise<string> {
-  const url = `${GMAIL_API_BASE}/messages/${messageId}?format=full`
-  const res = await fetch(url, {
+  const res = await fetch(`${GMAIL_API_BASE}/messages/${messageId}?format=full`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   if (!res.ok) return ''
   const data = await res.json()
 
-  // Extract plain text or HTML body
   function extractBody(payload: any): string {
     if (!payload) return ''
     if (payload.body?.data) {
@@ -162,12 +153,7 @@ Schema:
     "order_ref": "order ID string or null",
     "order_total": number (INR, numeric only),
     "items": [
-      {
-        "item_name": "string",
-        "quantity": number,
-        "unit": "kg | g | L | pcs | null",
-        "unit_price": number
-      }
+      { "item_name": "string", "quantity": number, "unit": "kg|g|L|pcs|null", "unit_price": number }
     ],
     "notes": "coupon or discount info or null"
   }
@@ -177,7 +163,7 @@ Rules:
 - Skip emails with no clear order details.
 - Dates must be YYYY-MM-DD in IST.
 - Do not invent data. Use null if unavailable.
-- For Zomato: if individual item prices are not listed, use one item: { item_name: "Food order", quantity: 1, unit: null, unit_price: <total> }
+- For Zomato: if item prices not listed, use one item: { item_name: "Food order", quantity: 1, unit: null, unit_price: <total> }
 - For Amazon: item prices = individual item price, not order total.
 
 Emails:
@@ -203,15 +189,11 @@ async function extractOrdersFromEmails(emailTexts: string[]) {
   const data  = await res.json()
   const raw   = data.content?.find((b: any) => b.type === 'text')?.text || '[]'
   const clean = raw.replace(/```json|```/g, '').trim()
-  try {
-    return JSON.parse(clean)
-  } catch {
-    console.error('Failed to parse Anthropic response:', clean)
-    return []
-  }
+  try { return JSON.parse(clean) }
+  catch { console.error('Failed to parse Anthropic response:', clean); return [] }
 }
 
-// ─── Save orders to Supabase ──────────────────────────────────────────────────
+// ─── Save orders ──────────────────────────────────────────────────────────────
 
 async function saveOrders(supabase: any, homeId: string, userId: string, orders: any[]) {
   const saved: any[] = []
@@ -219,11 +201,9 @@ async function saveOrders(supabase: any, homeId: string, userId: string, orders:
 
   for (const order of orders) {
     if (!order.platform || !order.order_date || !order.order_total) {
-      skipped.push(order)
-      continue
+      skipped.push(order); continue
     }
 
-    // Deduplication check
     if (order.order_ref) {
       const { data: existing } = await supabase
         .from('expense_orders')
@@ -231,20 +211,13 @@ async function saveOrders(supabase: any, homeId: string, userId: string, orders:
         .eq('home_id', homeId)
         .eq('order_ref', order.order_ref)
         .maybeSingle()
-
-      if (existing) {
-        skipped.push(order)
-        continue
-      }
+      if (existing) { skipped.push(order); continue }
     }
 
-    // Determine category
     const category =
       order.platform === 'blinkit' ? 'grocery' :
-      order.platform === 'zomato'  ? 'food_delivery' :
-      'shopping'
+      order.platform === 'zomato'  ? 'food_delivery' : 'shopping'
 
-    // Insert order
     const { data: inserted, error: orderErr } = await supabase
       .from('expense_orders')
       .insert({
@@ -255,18 +228,13 @@ async function saveOrders(supabase: any, homeId: string, userId: string, orders:
         order_ref:   order.order_ref || null,
         order_total: order.order_total,
         notes:       order.notes || null,
-        created_by:  userId,
+        connected_by: userId,  // which member's Gmail imported this
       })
       .select()
       .single()
 
-    if (orderErr) {
-      console.error('Order insert error:', orderErr)
-      skipped.push(order)
-      continue
-    }
+    if (orderErr) { console.error('Order insert error:', orderErr); skipped.push(order); continue }
 
-    // Insert items
     if (order.items?.length) {
       const items = order.items.map((it: any) => ({
         order_id:   inserted.id,
@@ -286,73 +254,28 @@ async function saveOrders(supabase: any, homeId: string, userId: string, orders:
   return { saved, skipped }
 }
 
-// ─── Action handlers ──────────────────────────────────────────────────────────
+// ─── Core sync logic (shared) ─────────────────────────────────────────────────
 
-// CONNECT: exchange OAuth code for tokens, store refresh token
-async function handleConnect(supabase: any, body: any, userId: string) {
-  const { code, home_id } = body
-  if (!code || !home_id) throw new Error('Missing code or home_id')
+async function runSync(
+  supabase: any,
+  conn: { id: string; refresh_token: string; last_synced_at: string | null },
+  homeId: string,
+  userId: string,
+  daysBackOverride?: number
+) {
+  let daysBack = daysBackOverride ?? (
+    !conn.last_synced_at ? 90 :
+    Math.ceil((Date.now() - new Date(conn.last_synced_at).getTime()) / (1000 * 60 * 60 * 24)) + 1
+  )
 
-  const tokens = await exchangeCodeForTokens(code)
-  if (!tokens.refresh_token) throw new Error('No refresh token returned — ensure access_type=offline in OAuth request')
-
-  // Upsert connection
-  const { error } = await supabase
-    .from('home_gmail_connections')
-    .upsert({
-      home_id:       home_id,
-      user_id:       userId,
-      refresh_token: tokens.refresh_token,
-      last_synced_at: null,
-      connected_at:  new Date().toISOString(),
-    }, { onConflict: 'home_id' })
-
-  if (error) throw error
-
-  // Immediately trigger first sync (last 90 days)
-  return handleSync(supabase, { home_id, days_back: 90 }, userId, true)
-}
-
-// SYNC: fetch emails, extract orders, save new ones
-async function handleSync(supabase: any, body: any, userId: string, isFirstRun = false) {
-  const { home_id } = body
-
-  // Get connection
-  const { data: conn, error: connErr } = await supabase
-    .from('home_gmail_connections')
-    .select('refresh_token, last_synced_at')
-    .eq('home_id', home_id)
-    .maybeSingle()
-
-  if (connErr || !conn) throw new Error('Gmail not connected for this home')
-
-  // Determine lookback
-  let daysBack = 1
-  if (!conn.last_synced_at || body.days_back) {
-    daysBack = body.days_back || 90
-  } else {
-    const lastSync  = new Date(conn.last_synced_at)
-    const hoursSince = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60)
-    daysBack = Math.ceil(hoursSince / 24) + 1
-  }
-
-  // Get fresh access token
   const accessToken = await refreshAccessToken(conn.refresh_token)
-
-  // Search Gmail
-  const query    = buildGmailQuery(daysBack)
-  const messages = await searchEmails(accessToken, query, 50)
+  const messages    = await searchEmails(accessToken, buildGmailQuery(daysBack), 50)
 
   if (!messages.length) {
-    // Update last_synced_at even if no emails found
-    await supabase
-      .from('home_gmail_connections')
-      .update({ last_synced_at: new Date().toISOString() })
-      .eq('home_id', home_id)
-    return { new_orders: [], skipped: 0, message: 'No order emails found' }
+    await supabase.from('gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
+    return { new_orders: 0, skipped: 0, message: 'No order emails found' }
   }
 
-  // Fetch email bodies (limit to 20 per sync to manage costs)
   const emailTexts: string[] = []
   for (const msg of messages.slice(0, 20)) {
     const body = await fetchEmailBody(accessToken, msg.id)
@@ -360,51 +283,130 @@ async function handleSync(supabase: any, body: any, userId: string, isFirstRun =
   }
 
   if (!emailTexts.length) {
-    return { new_orders: [], skipped: 0, message: 'No readable email content' }
+    return { new_orders: 0, skipped: 0, message: 'No readable email content' }
   }
 
-  // Extract orders via Anthropic
   const extracted = await extractOrdersFromEmails(emailTexts)
+  const { saved, skipped } = await saveOrders(supabase, homeId, userId, extracted)
 
-  // Save to Supabase
-  const { saved, skipped } = await saveOrders(supabase, home_id, userId, extracted)
-
-  // Update last_synced_at
-  await supabase
-    .from('home_gmail_connections')
-    .update({ last_synced_at: new Date().toISOString() })
-    .eq('home_id', home_id)
+  await supabase.from('gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
 
   return {
-    new_orders:  saved,
-    skipped:     skipped.length,
-    is_first_run: isFirstRun,
-    message:     `Found ${extracted.length} orders, saved ${saved.length}, skipped ${skipped.length} duplicates`,
+    new_orders: saved.length,
+    skipped:    skipped.length,
+    message:    `Found ${extracted.length} orders, saved ${saved.length}, skipped ${skipped.length} duplicates`,
   }
 }
 
-// DISCONNECT: remove Gmail connection
-async function handleDisconnect(supabase: any, body: any) {
+// ─── Action handlers ──────────────────────────────────────────────────────────
+
+async function handleConnect(supabase: any, body: any, userId: string) {
+  const { code, home_id } = body
+  if (!code || !home_id) throw new Error('Missing code or home_id')
+
+  const tokens = await exchangeCodeForTokens(code)
+  if (!tokens.refresh_token) throw new Error('No refresh token — ensure access_type=offline and prompt=consent in OAuth URL')
+
+  // Get the Gmail address from Google
+  const userinfoRes  = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: `Bearer ${tokens.access_token}` }
+  })
+  const userinfo     = userinfoRes.ok ? await userinfoRes.json() : {}
+  const gmailAddress = userinfo.email || null
+
+  // Upsert — one row per (home_id, user_id)
+  const { error } = await supabase
+    .from('gmail_connections')
+    .upsert({
+      home_id:        home_id,
+      user_id:        userId,
+      gmail_address:  gmailAddress,
+      refresh_token:  tokens.refresh_token,
+      last_synced_at: null,
+      connected_at:   new Date().toISOString(),
+    }, { onConflict: 'home_id,user_id' })
+
+  if (error) throw error
+
+  // Get the connection we just upserted so we can pass it to runSync
+  const { data: conn } = await supabase
+    .from('gmail_connections')
+    .select('id, refresh_token, last_synced_at')
+    .eq('home_id', home_id)
+    .eq('user_id', userId)
+    .single()
+
+  // First sync — last 90 days
+  const syncResult = await runSync(supabase, conn, home_id, userId, 90)
+
+  return {
+    connected:     true,
+    gmail_address: gmailAddress,
+    first_sync:    syncResult,
+  }
+}
+
+async function handleSync(supabase: any, body: any, userId: string) {
+  const { home_id } = body
+
+  const { data: conn, error } = await supabase
+    .from('gmail_connections')
+    .select('id, refresh_token, last_synced_at')
+    .eq('home_id', home_id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error || !conn) throw new Error('Gmail not connected for this user')
+  return runSync(supabase, conn, home_id, userId)
+}
+
+async function handleSyncAll(supabase: any, body: any) {
+  // Called by pg_cron — syncs ALL member connections for a home
+  const { home_id } = body
+
+  const { data: connections, error } = await supabase
+    .from('gmail_connections')
+    .select('id, user_id, refresh_token, last_synced_at')
+    .eq('home_id', home_id)
+
+  if (error) throw error
+  if (!connections?.length) return { message: 'No Gmail connections for this home', results: [] }
+
+  const results = []
+  for (const conn of connections) {
+    try {
+      const result = await runSync(supabase, conn, home_id, conn.user_id)
+      results.push({ user_id: conn.user_id, ...result })
+    } catch (err: any) {
+      results.push({ user_id: conn.user_id, error: err.message })
+    }
+  }
+  return { results }
+}
+
+async function handleDisconnect(supabase: any, body: any, userId: string) {
   const { home_id } = body
   const { error } = await supabase
-    .from('home_gmail_connections')
+    .from('gmail_connections')
     .delete()
     .eq('home_id', home_id)
+    .eq('user_id', userId)
   if (error) throw error
   return { message: 'Gmail disconnected' }
 }
 
-// STATUS: check connection status
-async function handleStatus(supabase: any, body: any) {
+async function handleStatus(supabase: any, body: any, userId: string) {
   const { home_id } = body
   const { data } = await supabase
-    .from('home_gmail_connections')
-    .select('connected_at, last_synced_at')
+    .from('gmail_connections')
+    .select('gmail_address, connected_at, last_synced_at')
     .eq('home_id', home_id)
+    .eq('user_id', userId)
     .maybeSingle()
 
   return {
     connected:      !!data,
+    gmail_address:  data?.gmail_address || null,
     connected_at:   data?.connected_at || null,
     last_synced_at: data?.last_synced_at || null,
   }
@@ -413,41 +415,32 @@ async function handleStatus(supabase: any, body: any) {
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS })
   }
-
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405, headers: CORS })
   }
 
   try {
-    // Verify auth — get user from JWT
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing Authorization header')
 
-    const supabase  = getSupabase()
-    const userToken = authHeader.replace('Bearer ', '')
-
-    // Verify the user token and get user
-    const { data: { user }, error: authErr } = await createClient(
-      SUPABASE_URL,
-      Deno.env.get('SUPABASE_ANON_KEY') || '',
-      { global: { headers: { Authorization: authHeader } } }
-    ).auth.getUser()
-
+    // Verify JWT and get user
+    const { data: { user }, error: authErr } = await getUserClient(authHeader).auth.getUser()
     if (authErr || !user) throw new Error('Unauthorized')
 
-    const body   = await req.json()
-    const action = body.action
+    const supabase = getAdminClient()
+    const body     = await req.json()
+    const action   = body.action
 
     let result
     switch (action) {
       case 'connect':    result = await handleConnect(supabase, body, user.id);    break
       case 'sync':       result = await handleSync(supabase, body, user.id);       break
-      case 'disconnect': result = await handleDisconnect(supabase, body);          break
-      case 'status':     result = await handleStatus(supabase, body);              break
+      case 'sync-all':   result = await handleSyncAll(supabase, body);             break
+      case 'disconnect': result = await handleDisconnect(supabase, body, user.id); break
+      case 'status':     result = await handleStatus(supabase, body, user.id);     break
       default:           throw new Error(`Unknown action: ${action}`)
     }
 
