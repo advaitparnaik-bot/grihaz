@@ -51,9 +51,15 @@ export function useGmailCallback() {
     // Call the Edge Function to exchange code for tokens + run first sync
     async function handleCallback() {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        // Wait up to 5 seconds for session to be restored
+        let session = null
+        for (let i = 0; i < 10; i++) {
+          const { data } = await supabase.auth.getSession()
+          if (data.session) { session = data.session; break }
+          await new Promise(r => setTimeout(r, 500))
+        }
         if (!session) {
-          console.error('Gmail callback: no active session')
+          console.error('Gmail callback: no active session after waiting')
           return
         }
 
