@@ -10,7 +10,7 @@ import Profile from './components/Profile'
 import './App.css'
 import JoinHome from './pages/JoinHome'
 import HomeManagement from './components/HomeManagement'
-import { useGmailCallback } from './lib/gmailCallback'
+import { useGmailCallback, processPendingGmailCallback } from './lib/gmailCallback'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -38,7 +38,12 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
-
+  useEffect(() => {
+    if (session && home) {
+      processPendingGmailCallback()
+    }
+  }, [session, home])
+  
   async function fetchHome(userId) {
     setHomeLoading(true)
     const { data, error } = await supabase.from('home_members')
