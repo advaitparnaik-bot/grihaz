@@ -17,7 +17,7 @@ export default function Profile({ user, home, onClose, onNavigate }) {
   async function fetchGmailConnection() {
     setLoadingGmail(true)
     const { data } = await supabase
-      .from('gmail_connections')
+      .from('home_gmail_connections')
       .select('id, gmail_address, last_synced_at')
       .eq('home_id', home.id)
       .eq('user_id', user.id)
@@ -46,7 +46,7 @@ export default function Profile({ user, home, onClose, onNavigate }) {
   async function handleDisconnectGmail() {
     setActionLoading(true)
     await supabase
-      .from('gmail_connections')
+      .from('home_gmail_connections')
       .delete()
       .eq('id', gmailConnection.id)
     setGmailConnection(null)
@@ -61,11 +61,11 @@ export default function Profile({ user, home, onClose, onNavigate }) {
 
   async function handleDeleteAllData() {
     setActionLoading(true)
-    // Delete in order: expenses, gmail_connections, attendance, adhoc_entries,
+    // Delete in order: expenses, home_gmail_connections, attendance, adhoc_entries,
     // laundry_entries, staff, home_members, homes
     const tables = [
       { table: 'expenses',          col: 'home_id' },
-      { table: 'gmail_connections', col: 'home_id' },
+      { table: 'home_gmail_connections', col: 'home_id' },
       { table: 'attendance',        col: 'home_id' },
       { table: 'adhoc_entries',     col: 'home_id' },
       { table: 'laundry_entries',   col: 'home_id' },
