@@ -230,7 +230,6 @@ export default function TransactionReview() {
 
   return (
     <div className="tr-root">
-      <header className="sm-header"><h1>Transactions</h1></header>
 
       <div className="tr-filters">
         <div className="tr-filter-group">

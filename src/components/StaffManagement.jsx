@@ -183,9 +183,6 @@ export default function StaffManagement() {
 
   return (
     <div className="sm-root">
-      <header className="sm-header">
-        <h1>Staff</h1>
-      </header>
 
       <div className="sm-tabs">
         {['active', 'inactive', 'all'].map(tab => (

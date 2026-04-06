@@ -202,7 +202,6 @@ export default function Settlement() {
 
   return (
     <div className="set-root">
-      <header className="sm-header"><h1>Settlement</h1></header>
 
       {/* Month picker */}
       <div className="set-month-row">

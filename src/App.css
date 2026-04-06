@@ -219,3 +219,73 @@
 }
 .bnav-btn--active { color: var(--saffron); }
 .bnav-btn:hover:not(.bnav-btn--active) { color: var(--ink-soft); }
+
+/* ── Top bar ── */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.top-bar-brand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.top-bar-logo-glyph {
+  font-size: 1.1rem;
+  color: var(--saffron);
+  line-height: 1;
+}
+.top-bar-wordmark {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.top-bar-home-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-right: 4px;
+}
+.top-bar-icon-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--ink-mid);
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0;
+  transition: background 0.15s;
+}
+.top-bar-icon-btn:hover { background: var(--border); }
+
+/* ── Profile overlay ── */
+.profile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--paper);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
