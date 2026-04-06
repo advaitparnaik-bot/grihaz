@@ -272,7 +272,7 @@ async function runSync(
   const messages    = await searchEmails(accessToken, buildGmailQuery(daysBack), 50)
 
   if (!messages.length) {
-    await supabase.from('gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
+    await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
     return { new_orders: 0, skipped: 0, message: 'No order emails found' }
   }
 
@@ -289,7 +289,7 @@ async function runSync(
   const extracted = await extractOrdersFromEmails(emailTexts)
   const { saved, skipped } = await saveOrders(supabase, homeId, userId, extracted)
 
-  await supabase.from('gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
+  await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
 
   return {
     new_orders: saved.length,
@@ -316,7 +316,7 @@ async function handleConnect(supabase: any, body: any, userId: string) {
 
   // Upsert — one row per (home_id, user_id)
   const { error } = await supabase
-    .from('gmail_connections')
+    .from('home_gmail_connections')
     .upsert({
       home_id:        home_id,
       user_id:        userId,
@@ -330,7 +330,7 @@ async function handleConnect(supabase: any, body: any, userId: string) {
 
   // Get the connection we just upserted so we can pass it to runSync
   const { data: conn } = await supabase
-    .from('gmail_connections')
+    .from('home_gmail_connections')
     .select('id, refresh_token, last_synced_at')
     .eq('home_id', home_id)
     .eq('user_id', userId)
@@ -350,7 +350,7 @@ async function handleSync(supabase: any, body: any, userId: string) {
   const { home_id } = body
 
   const { data: conn, error } = await supabase
-    .from('gmail_connections')
+    .from('home_gmail_connections')
     .select('id, refresh_token, last_synced_at')
     .eq('home_id', home_id)
     .eq('user_id', userId)
@@ -365,7 +365,7 @@ async function handleSyncAll(supabase: any, body: any) {
   const { home_id } = body
 
   const { data: connections, error } = await supabase
-    .from('gmail_connections')
+    .from('home_gmail_connections')
     .select('id, user_id, refresh_token, last_synced_at')
     .eq('home_id', home_id)
 
@@ -387,7 +387,7 @@ async function handleSyncAll(supabase: any, body: any) {
 async function handleDisconnect(supabase: any, body: any, userId: string) {
   const { home_id } = body
   const { error } = await supabase
-    .from('gmail_connections')
+    .from('home_gmail_connections')
     .delete()
     .eq('home_id', home_id)
     .eq('user_id', userId)
@@ -398,7 +398,7 @@ async function handleDisconnect(supabase: any, body: any, userId: string) {
 async function handleStatus(supabase: any, body: any, userId: string) {
   const { home_id } = body
   const { data } = await supabase
-    .from('gmail_connections')
+    .from('home_gmail_connections')
     .select('gmail_address, connected_at, last_synced_at')
     .eq('home_id', home_id)
     .eq('user_id', userId)
