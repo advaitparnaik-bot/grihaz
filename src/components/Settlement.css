@@ -68,3 +68,44 @@
 }
 
 .set-settle-btn { width: 100%; justify-content: center; }
+.set-spends {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 0 16px 12px;
+  border: 1px solid var(--border);
+}
+
+.set-spends-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.set-spends-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.set-spends-total {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.set-spends-breakdown {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.set-spends-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+}

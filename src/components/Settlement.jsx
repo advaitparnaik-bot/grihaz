@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import './Settlement.css'
+import { runDailySync } from '../lib/gmailSync'
 
 function getMonthOptions() {
   const options = []
@@ -80,9 +81,10 @@ export default function Settlement() {
   const [settling, setSettling] = useState(null)
   const [settleForm, setSettleForm] = useState({ amount: '', mode: 'cash' })
   const [saving, setSaving] = useState(false)
+  const [expenseTotal, setExpenseTotal] = useState({ total: 0, byCategory: {} })
 
   useEffect(() => { loadHome() }, [])
-  useEffect(() => { if (homeId) loadSummaries() }, [homeId, selectedMonth])
+  useEffect(() => { if (homeId) { loadSummaries(); loadExpenses() } }, [homeId, selectedMonth])
 
   async function loadHome() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -166,6 +168,31 @@ export default function Settlement() {
     } catch (err) { console.error(err) }
     setLoading(false)
   }
+async function loadExpenses() {
+  const monthDate = new Date(selectedMonth)
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+  const firstDay = selectedMonth
+  const lastDayDate = new Date(year, month + 1, 0)
+  const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1).padStart(2,'0')}-${String(lastDayDate.getDate()).padStart(2,'0')}`
+
+  const { data } = await supabase
+    .from('expense_orders')
+    .select('category, order_total')
+    .eq('home_id', homeId)
+    .gte('order_date', firstDay)
+    .lte('order_date', lastDay)
+
+  if (!data) return
+  let total = 0
+  const byCategory = {}
+  for (const order of data) {
+    const amt = Number(order.order_total) || 0
+    total += amt
+    byCategory[order.category] = (byCategory[order.category] || 0) + amt
+  }
+  setExpenseTotal({ total, byCategory })
+}
 
   function openSettle(summary) {
     setSettleForm({ amount: summary.payout.toString(), mode: 'cash' })
@@ -200,6 +227,13 @@ export default function Settlement() {
   const totalOutstanding = staffSummaries.filter(s => !s.settled).reduce((sum, s) => sum + s.payout, 0)
   const totalSettled = staffSummaries.filter(s => s.settled).reduce((sum, s) => sum + (s.settlement?.amount || 0), 0)
 
+  const CATEGORY_LABELS = {
+    grocery: 'Grocery',
+    shopping: 'Shopping',
+    restaurant: 'Restaurant',
+    fashion_apparel: 'Fashion & Apparel',
+  }
+
   return (
     <div className="set-root">
 
@@ -213,6 +247,24 @@ export default function Settlement() {
           </button>
         ))}
       </div>
+
+    {/* Household Spends */}
+    <div className="set-spends">
+      <div className="set-spends-header">
+        <span className="set-spends-title">Household Spends</span>
+        <span className="set-spends-total">₹{Math.round(expenseTotal.total).toLocaleString('en-IN')}</span>
+      </div>
+      {expenseTotal.total > 0 && (
+        <div className="set-spends-breakdown">
+          {Object.entries(expenseTotal.byCategory).map(([category, amt]) => (
+            <div key={category} className="set-spends-row">
+              <span>{CATEGORY_LABELS[category] || category}</span>
+              <span>₹{Math.round(amt).toLocaleString('en-IN')}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
 
       {/* Totals */}
       <div className="set-totals">
