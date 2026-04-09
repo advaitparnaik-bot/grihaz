@@ -18,7 +18,8 @@ export default function App() {
   const [home, setHome] = useState(null)
   const [homeLoading, setHomeLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [showProfile, setShowProfile] = useState(false)   // ← NEW
+  const [showProfile, setShowProfile] = useState(false)
+  const [showExpensePlatforms, setShowExpensePlatforms] = useState(false)
   useGmailCallback()     
 
   useEffect(() => {
@@ -156,16 +157,17 @@ export default function App() {
       </nav>
 
       {/* ── Profile overlay ── */}
-      {showProfile && (
-        <div className="profile-overlay">
-          <Profile
-            user={session.user}
-            home={home}
-            onClose={() => setShowProfile(false)}
-            onNavigate={(tab) => { setActiveTab(tab); setShowProfile(false) }}
-          />
-        </div>
-      )}
+      <div className="profile-overlay" style={{ display: showProfile ? 'block' : 'none' }}>
+        <Profile
+          user={session.user}
+          home={home}
+          onClose={() => setShowProfile(false)}
+          onNavigate={(tab) => { setActiveTab(tab); setShowProfile(false) }}
+          showExpensePlatforms={showExpensePlatforms}
+          onOpenExpensePlatforms={() => setShowExpensePlatforms(true)}
+          onCloseExpensePlatforms={() => setShowExpensePlatforms(false)}
+        />
+      </div>
 
     </div>
   )

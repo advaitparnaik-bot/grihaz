@@ -3,13 +3,13 @@ import { supabase } from '../lib/supabase'
 import './Profile.css'
 import ExpensePlatforms from './ExpensePlatforms'
 
-export default function Profile({ user, home, onClose, onNavigate }) {
+export default function Profile({ user, home, onClose, onNavigate, showExpensePlatforms, onOpenExpensePlatforms, onCloseExpensePlatforms }) {
   const [gmailConnection, setGmailConnection] = useState(null)
   const [loadingGmail, setLoadingGmail] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
-  const [showExpensePlatforms, setShowExpensePlatforms] = useState(false)
+  // showExpensePlatforms is now controlled by App.jsx via props
   const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export default function Profile({ user, home, onClose, onNavigate }) {
           <div className="profile-card profile-card--list" style={{ marginTop: '12px' }}>
             <button
               className="profile-list-item"
-              onClick={() => setShowExpensePlatforms(true)}
+              onClick={onOpenExpensePlatforms}
             >
               <span>Configure Expense Platforms</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -316,11 +316,11 @@ export default function Profile({ user, home, onClose, onNavigate }) {
         </div>
       )}
     {showExpensePlatforms && (
-        <ExpensePlatforms
-          home={home}
-          onClose={() => setShowExpensePlatforms(false)}
-        />
-      )}
+      <ExpensePlatforms
+        home={home}
+        onClose={onCloseExpensePlatforms}
+      />
+    )}  
     </div>
   )
 }
