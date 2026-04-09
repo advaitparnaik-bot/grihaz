@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import './Profile.css'
+import ExpensePlatforms from './ExpensePlatforms'
 
 export default function Profile({ user, home, onClose, onNavigate }) {
   const [gmailConnection, setGmailConnection] = useState(null)
@@ -8,6 +9,7 @@ export default function Profile({ user, home, onClose, onNavigate }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
+  const [showExpensePlatforms, setShowExpensePlatforms] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
@@ -147,6 +149,17 @@ export default function Profile({ user, home, onClose, onNavigate }) {
                 </button>
               </div>
             )}
+          </div>
+          <div className="profile-card profile-card--list" style={{ marginTop: '12px' }}>
+            <button
+              className="profile-list-item"
+              onClick={() => setShowExpensePlatforms(true)}
+            >
+              <span>Configure Expense Platforms</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -301,6 +314,12 @@ export default function Profile({ user, home, onClose, onNavigate }) {
             </div>
           </div>
         </div>
+      )}
+    {showExpensePlatforms && (
+        <ExpensePlatforms
+          home={home}
+          onClose={() => setShowExpensePlatforms(false)}
+        />
       )}
     </div>
   )
