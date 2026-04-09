@@ -37,6 +37,7 @@ const KNOWN_SENDERS = [
   'order-update@amazon.in',
   'shipment-tracking@amazon.in',
   'auto-confirm@amazon.in',
+  'marketplace-messages@amazon.in',
 ]
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -112,12 +113,17 @@ async function searchEmails(accessToken: string, query: string, maxResults = 50)
   return (data.messages || []) as { id: string }[]
 }
 
-async function fetchEmailBody(accessToken: string, messageId: string): Promise<string> {
+async function fetchEmailBody(accessToken: string, messageId: string): Promise<{ body: string, sentDate: string | null, senderEmail: string | null }> {
   const res = await fetch(`${GMAIL_API_BASE}/messages/${messageId}?format=full`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
-  if (!res.ok) return ''
+  if (!res.ok) return { body: '', sentDate: null, senderEmail: null }
   const data = await res.json()
+  const headers: any[] = data.payload?.headers || []
+  const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || null
+  const sentDate = dateHeader ? new Date(dateHeader).toISOString().split('T')[0] : null
+  const fromHeader = headers.find((h: any) => h.name === 'From')?.value || null
+  const senderEmail = fromHeader ? fromHeader.match(/[\w.+-]+@[\w.-]+/)?.[0]?.toLowerCase() : null
 
   function extractBody(payload: any): string {
     if (!payload) return ''
@@ -133,7 +139,7 @@ async function fetchEmailBody(accessToken: string, messageId: string): Promise<s
     return ''
   }
 
-  return extractBody(data.payload)
+  return { body: extractBody(data.payload), sentDate, senderEmail }
 }
 
 // ─── Anthropic extraction ─────────────────────────────────────────────────────
@@ -149,7 +155,7 @@ Schema:
 [
   {
     "platform": "blinkit" | "zomato" | "amazon",
-    "order_date": "YYYY-MM-DD",
+    "order_date": "YYYY-MM-DD — look for 'Order placed', 'Order date', 'Ordered on' in the body first. For Zomato look for the delivery date. Fall back to EMAIL_DATE only if nothing found in body.",
     "order_ref": "order ID string or null",
     "order_total": number (INR, numeric only),
     "items": [
@@ -165,6 +171,7 @@ Rules:
 - Do not invent data. Use null if unavailable.
 - For Zomato: if item prices not listed, use one item: { item_name: "Food order", quantity: 1, unit: null, unit_price: <total> }
 - For Amazon: item prices = individual item price, not order total.
+- For Amazon: order date is near text like 'Order Placed', 'Ordered on', or 'Order Date'. Do NOT use shipping or delivery dates.
 
 Emails:
 ---
@@ -200,40 +207,55 @@ async function saveOrders(supabase: any, homeId: string, userId: string, orders:
   const skipped: any[] = []
 
   for (const order of orders) {
-    if (!order.platform || !order.order_date || !order.order_total) {
+    if (!order.platform) {
       skipped.push(order); continue
     }
+    const orderDate = order.order_date || new Date().toISOString().split('T')[0]
+    const orderTotal = order.order_total || 0
 
     if (order.order_ref) {
       const { data: existing } = await supabase
-        .from('expense_orders')
-        .select('id')
-        .eq('home_id', homeId)
-        .eq('order_ref', order.order_ref)
-        .maybeSingle()
-      if (existing) { skipped.push(order); continue }
+      .from('expense_orders')
+      .select('id, order_date, order_total, notes')
+      .eq('home_id', homeId)
+      .eq('order_ref', order.order_ref)
+      .maybeSingle()
+    if (existing) {
+      const updates: any = {}
+      if (!existing.order_date && order.order_date) updates.order_date = order.order_date
+      if (!existing.order_total && order.order_total) updates.order_total = order.order_total
+      if (!existing.notes && order.notes) updates.notes = order.notes
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('expense_orders').update(updates).eq('id', existing.id)
+      }
+      skipped.push(order); continue
+    }
     }
 
-    const category =
-      order.platform === 'blinkit' ? 'grocery' :
-      order.platform === 'zomato'  ? 'food_delivery' : 'shopping'
+    const category = order.category || 'shopping'
 
-    const { data: inserted, error: orderErr } = await supabase
+    const newId = crypto.randomUUID()
+
+    const { error: orderErr } = await supabase
       .from('expense_orders')
       .insert({
+        id:          newId,
         home_id:     homeId,
         platform:    order.platform,
         category,
-        order_date:  order.order_date,
+        order_date:  orderDate,
         order_ref:   order.order_ref || null,
-        order_total: order.order_total,
+        order_total: orderTotal,
         notes:       order.notes || null,
-        connected_by: userId,  // which member's Gmail imported this
+        created_by:  userId,
       })
-      .select()
-      .single()
 
-    if (orderErr) { console.error('Order insert error:', orderErr); skipped.push(order); continue }
+    if (orderErr) {
+      throw new Error(`Insert failed: ${JSON.stringify(orderErr)}`)
+    }
+
+    const inserted = { id: newId }
+
 
     if (order.items?.length) {
       const items = order.items.map((it: any) => ({
@@ -276,18 +298,40 @@ async function runSync(
     return { new_orders: 0, skipped: 0, message: 'No order emails found' }
   }
 
-  const emailTexts: string[] = []
-  for (const msg of messages.slice(0, 20)) {
-    const body = await fetchEmailBody(accessToken, msg.id)
-    if (body) emailTexts.push(body)
+  // Look up sender → category mapping for this home
+  const { data: sources } = await supabase
+    .from('expense_email_sources')
+    .select('sender_email, platform, category')
+    .eq('home_id', homeId)
+    .eq('is_active', true)
+
+  const sourceMap: Record<string, { platform: string, category: string }> = {}
+  for (const s of sources || []) {
+    sourceMap[s.sender_email] = { platform: s.platform, category: s.category }
   }
 
-  if (!emailTexts.length) {
+  const emailPayloads: { text: string, platform: string, category: string }[] = []
+  for (const msg of messages.slice(0, 10)) {
+    const { body, sentDate, senderEmail } = await fetchEmailBody(accessToken, msg.id)
+    if (!body) continue
+    const source = senderEmail ? sourceMap[senderEmail] : null
+    if (!source) continue
+    const text = sentDate ? `EMAIL_DATE: ${sentDate}\n\n${body}` : body
+    emailPayloads.push({ text, platform: source.platform, category: source.category })
+  }
+
+  if (!emailPayloads.length) {
     return { new_orders: 0, skipped: 0, message: 'No readable email content' }
   }
 
-  const extracted = await extractOrdersFromEmails(emailTexts)
-  const { saved, skipped } = await saveOrders(supabase, homeId, userId, extracted)
+  const extracted = await extractOrdersFromEmails(emailPayloads.map(e => e.text))
+  const enriched = extracted.map((order: any, i: number) => ({
+    ...order,
+    platform: emailPayloads[i]?.platform || order.platform,
+    category: emailPayloads[i]?.category || null,
+  }))
+
+  const { saved, skipped } = await saveOrders(supabase, homeId, userId, enriched)
 
   await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
 
@@ -295,6 +339,78 @@ async function runSync(
     new_orders: saved.length,
     skipped:    skipped.length,
     message:    `Found ${extracted.length} orders, saved ${saved.length}, skipped ${skipped.length} duplicates`,
+  }
+}
+
+async function runHistorySync(
+  supabase: any,
+  conn: { id: string; refresh_token: string },
+  homeId: string,
+  userId: string,
+  pageToken?: string,
+) {
+  const accessToken = await refreshAccessToken(conn.refresh_token)
+  const query = buildGmailQuery(90)
+
+  const url = `${GMAIL_API_BASE}/messages?q=${encodeURIComponent(query)}&maxResults=10${pageToken ? `&pageToken=${pageToken}` : ''}`
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!res.ok) throw new Error(`Gmail search failed: ${res.status}`)
+  const data = await res.json()
+
+  const messages: { id: string }[] = data.messages || []
+  const nextPageToken = data.nextPageToken || null
+
+  if (!messages.length) {
+    await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
+    return { new_orders: 0, skipped: 0, next_page_token: null, done: true }
+  }
+
+  // Look up sender → category mapping for this home
+  const { data: sources } = await supabase
+    .from('expense_email_sources')
+    .select('sender_email, platform, category')
+    .eq('home_id', homeId)
+    .eq('is_active', true)
+
+  const sourceMap: Record<string, { platform: string, category: string }> = {}
+  for (const s of sources || []) {
+    sourceMap[s.sender_email] = { platform: s.platform, category: s.category }
+  }
+
+  const emailPayloads: { text: string, platform: string, category: string }[] = []
+  for (const msg of messages) {
+    const { body, sentDate, senderEmail } = await fetchEmailBody(accessToken, msg.id)
+    if (!body) continue
+    const source = senderEmail ? sourceMap[senderEmail] : null
+    if (!source) continue // skip emails from unknown senders
+    const text = sentDate ? `EMAIL_DATE: ${sentDate}\n\n${body}` : body
+    emailPayloads.push({ text, platform: source.platform, category: source.category })
+  }
+
+  let saved: any[] = []
+  let skipped: any[] = []
+  if (emailPayloads.length) {
+    const extracted = await extractOrdersFromEmails(emailPayloads.map(e => e.text))
+    // Attach platform and category from sender lookup, overriding what Anthropic extracted
+    const enriched = extracted.map((order: any, i: number) => ({
+      ...order,
+      platform: emailPayloads[i]?.platform || order.platform,
+      category: emailPayloads[i]?.category || null,
+    }))
+    const result = await saveOrders(supabase, homeId, userId, enriched)
+    saved = result.saved
+    skipped = result.skipped
+  }
+
+  if (!nextPageToken) {
+    await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
+  }
+
+  return {
+    new_orders:      saved.length,
+    skipped:         skipped.length,
+    next_page_token: nextPageToken,
+    done:            !nextPageToken,
   }
 }
 
@@ -411,6 +527,17 @@ async function handleStatus(supabase: any, body: any, userId: string) {
     last_synced_at: data?.last_synced_at || null,
   }
 }
+async function handleSyncHistory(supabase: any, body: any, userId: string) {
+  const { home_id, page_token } = body
+  const { data: conn, error } = await supabase
+    .from('home_gmail_connections')
+    .select('id, refresh_token')
+    .eq('home_id', home_id)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error || !conn) throw new Error('Gmail not connected for this user')
+  return runHistorySync(supabase, conn, home_id, userId, page_token)
+}
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
@@ -426,22 +553,30 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing Authorization header')
 
-    // Verify JWT and get user
-    const { data: { user }, error: authErr } = await getUserClient(authHeader).auth.getUser()
-    if (authErr || !user) throw new Error('Unauthorized')
-
     const supabase = getAdminClient()
-    const body     = await req.json()
-    const action   = body.action
+
+    const body = await req.json()      // ← move this UP
+
+    const token = authHeader.replace('Bearer ', '')
+    const base64Payload = token.split('.')[1]
+    const payload = JSON.parse(atob(base64Payload))
+    const userId = payload.sub || body.user_id    // ← add fallback
+    if (!userId) throw new Error('Unauthorized')
+
+    const user = { id: userId }
+
+    const action = body.action
 
     let result
     switch (action) {
       case 'connect':    result = await handleConnect(supabase, body, user.id);    break
       case 'sync':       result = await handleSync(supabase, body, user.id);       break
       case 'sync-all':   result = await handleSyncAll(supabase, body);             break
+      case 'sync-history': result = await handleSyncHistory(supabase, body, user.id); break
       case 'disconnect': result = await handleDisconnect(supabase, body, user.id); break
       case 'status':     result = await handleStatus(supabase, body, user.id);     break
       default:           throw new Error(`Unknown action: ${action}`)
+      
     }
 
     return new Response(JSON.stringify(result), {
