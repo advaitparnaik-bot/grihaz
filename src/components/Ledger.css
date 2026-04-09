@@ -120,3 +120,35 @@
   font-size: 0.88rem; font-weight: 700; border: none;
   border-radius: 99px; cursor: pointer;
 }
+.tr-dot--expense { background: var(--saffron); }
+
+.tr-card--expense { cursor: default; }
+
+.tr-expense-tag {
+  font-size: 0.55rem; font-weight: 700;
+  padding: 1px 4px; border-radius: 4px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  background: var(--saffron-dim); color: var(--saffron);
+  text-align: center;
+}
+
+.tr-items {
+  margin-top: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.tr-item-row {
+  display: flex; justify-content: space-between;
+  font-size: 0.75rem; color: var(--ink-soft);
+}
+
+.tr-item-name { flex: 1; margin-right: 8px; }
+.tr-item-price { flex-shrink: 0; font-weight: 600; color: var(--ink); }
+
+.tr-expand-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.65rem; color: var(--ink-soft);
+  padding: 2px 4px; margin-top: 2px;
+}

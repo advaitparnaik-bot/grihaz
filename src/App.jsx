@@ -4,13 +4,13 @@ import Login from './pages/Login'
 import CreateHome from './pages/CreateHome'
 import Dashboard from './components/Dashboard'
 import StaffManagement from './components/StaffManagement'
-import TransactionReview from './components/TransactionReview'
+import Ledger from './components/Ledger'
 import Settlement from './components/Settlement'
 import Profile from './components/Profile'
 import './App.css'
 import JoinHome from './pages/JoinHome'
 import HomeManagement from './components/HomeManagement'
-import { useGmailCallback, processPendingGmailCallback } from './lib/gmailCallback'
+import { useGmailCallback } from './lib/gmailCallback'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -38,12 +38,7 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
-  useEffect(() => {
-    if (session && home) {
-      processPendingGmailCallback()
-    }
-  }, [session, home])
-  
+
   async function fetchHome(userId) {
     setHomeLoading(true)
     const { data, error } = await supabase.from('home_members')
@@ -102,7 +97,7 @@ export default function App() {
         {activeTab === 'dashboard'       && <Dashboard onNavigate={setActiveTab} />}
         {activeTab === 'home_management' && <HomeManagement onBack={() => setActiveTab('dashboard')} />}
         {activeTab === 'staff'           && <StaffManagement />}
-        {activeTab === 'transactions'    && <TransactionReview />}
+        {activeTab === 'transactions'    && <Ledger />}
         {activeTab === 'settlement'      && <Settlement />}
       </div>
 

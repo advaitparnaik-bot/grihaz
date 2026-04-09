@@ -1,0 +1,279 @@
+.ep-root {
+  position: fixed;
+  inset: 0;
+  background: #f5f0e8;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.ep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: #f5f0e8;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.ep-header-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.ep-back-btn,
+.ep-add-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.ep-back-btn { color: #1a1a1a; }
+.ep-add-btn  { color: #c94f1e; }
+
+/* Body */
+.ep-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 16px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.ep-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 48px 0;
+  color: #999;
+  font-size: 15px;
+}
+
+.ep-empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: #aaa;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.ep-empty strong {
+  color: #c94f1e;
+}
+
+/* Platform list */
+.ep-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ep-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.ep-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ep-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ep-platform-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.ep-category-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #c94f1e;
+  background: #fdf0eb;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.ep-delete-btn {
+  font-size: 13px;
+  color: #c0392b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  font-weight: 500;
+}
+
+.ep-senders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ep-sender-chip {
+  font-size: 12px;
+  color: #666;
+  background: #f0ebe0;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Bottom sheet */
+.ep-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+
+.ep-sheet {
+  background: #f5f0e8;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ep-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.ep-sheet-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.ep-sheet-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ep-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Category picker */
+.ep-cat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ep-cat-btn {
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1.5px solid #e0d8cc;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  color: #1a1a1a;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.ep-cat-btn--active {
+  background: #c94f1e;
+  border-color: #c94f1e;
+  color: #fff;
+}
+
+/* Email inputs */
+.ep-email-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ep-email-row input {
+  flex: 1;
+}
+
+.ep-email-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #ede8de;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ep-add-email-btn {
+  background: none;
+  border: none;
+  color: #c94f1e;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Footer */
+.ep-sheet-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  background: #f5f0e8;
+}
+
+.ep-sheet-footer .btn-ghost,
+.ep-sheet-footer .btn-primary {
+  flex: 1;
+}
