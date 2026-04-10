@@ -171,7 +171,7 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
               className="profile-list-item"
               onClick={() => { onNavigate('home_management'); onClose() }}
             >
-              <span>Home settings & Members</span>
+              <span>Manage Home</span>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -195,17 +195,24 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
               </svg>
             </a>
             <div className="profile-list-divider" />
-            <a
-              className="profile-list-item"
-              href="https://grihaz.rhyea.com/legal"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span>Legal</span>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </a>
+            <a className="profile-list-item"
+            href="/privacy"
+          >
+            <span>Privacy Policy</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
+          <div className="profile-list-divider" />
+
+            <a className="profile-list-item"
+            href="/terms"
+          >
+            <span>Terms of Service</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
           </div>
         </div>
 
