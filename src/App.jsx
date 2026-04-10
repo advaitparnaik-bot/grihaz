@@ -11,8 +11,12 @@ import './App.css'
 import JoinHome from './pages/JoinHome'
 import HomeManagement from './components/HomeManagement'
 import { useGmailCallback, processPendingGmailCallback } from './lib/gmailCallback'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 
 export default function App() {
+  if (window.location.pathname === '/privacy') return <Privacy />
+  if (window.location.pathname === '/terms') return <Terms />
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [home, setHome] = useState(null)
@@ -60,7 +64,7 @@ export default function App() {
     // Process any pending Gmail OAuth callback
     processPendingGmailCallback()
   }
-
+  
   if (loading || homeLoading) return null
   if (!session) return <Login />
 
