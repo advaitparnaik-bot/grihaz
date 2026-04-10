@@ -35,11 +35,17 @@ export async function processPendingGmailCallback() {
   const home_id = sessionStorage.getItem('gmail_pending_home_id')
   if (!code || !home_id) return null
 
-  // Clear immediately to prevent double-processing
   sessionStorage.removeItem('gmail_pending_code')
   sessionStorage.removeItem('gmail_pending_home_id')
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // Wait up to 3s for session to be available
+  let session = null
+  for (let i = 0; i < 10; i++) {
+    const { data } = await supabase.auth.getSession()
+    if (data.session) { session = data.session; break }
+    await new Promise(r => setTimeout(r, 300))
+  }
+
   if (!session) { console.error('No session for Gmail callback'); return null }
 
   const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gmail-sync`
@@ -49,11 +55,11 @@ export async function processPendingGmailCallback() {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ action: 'connect', code, home_id }),
+    body: JSON.stringify({ action: 'connect', code, home_id, redirect_uri: `${window.location.origin}/auth/gmail/callback` }),
   })
 
   const data = await res.json()
   if (!res.ok) { console.error('Gmail connect failed:', data.error); return null }
-  console.log('Gmail connected:', data.message)
+  console.log('Gmail connected:', data.gmail_address)
   return data
 }
