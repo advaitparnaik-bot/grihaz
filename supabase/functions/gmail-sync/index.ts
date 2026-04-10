@@ -29,16 +29,6 @@ const GMAIL_REDIRECT_URI   = `${APP_URL}/auth/gmail/callback`
 const GMAIL_TOKEN_URL      = 'https://oauth2.googleapis.com/token'
 const GMAIL_API_BASE       = 'https://gmail.googleapis.com/gmail/v1/users/me'
 
-const KNOWN_SENDERS = [
-  'no-reply@blinkit.com',
-  'orders@blinkit.com',
-  'noreply@zomato.com',
-  'no-reply@zomato.com',
-  'order-update@amazon.in',
-  'shipment-tracking@amazon.in',
-  'auto-confirm@amazon.in',
-  'marketplace-messages@amazon.in',
-]
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 
@@ -64,7 +54,7 @@ function getUserClient(authHeader: string) {
 
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 
-async function exchangeCodeForTokens(code: string) {
+async function exchangeCodeForTokens(code: string, redirectUri: string) {
   const res = await fetch(GMAIL_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -72,7 +62,7 @@ async function exchangeCodeForTokens(code: string) {
       code,
       client_id:     GOOGLE_CLIENT_ID,
       client_secret: GOOGLE_CLIENT_SECRET,
-      redirect_uri:  GMAIL_REDIRECT_URI,
+      redirect_uri:  redirectUri,
       grant_type:    'authorization_code',
     }),
   })
@@ -98,10 +88,10 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
 
 // ─── Gmail API ────────────────────────────────────────────────────────────────
 
-function buildGmailQuery(daysBack: number): string {
+function buildGmailQuery(daysBack: number, senders: string[]): string {
   const after   = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000)
   const dateStr = after.toISOString().split('T')[0].replace(/-/g, '/')
-  const from    = KNOWN_SENDERS.map(s => `from:${s}`).join(' OR ')
+  const from    = senders.map(s => `from:${s}`).join(' OR ')
   return `(${from}) after:${dateStr}`
 }
 
@@ -127,16 +117,23 @@ async function fetchEmailBody(accessToken: string, messageId: string): Promise<{
 
   function extractBody(payload: any): string {
     if (!payload) return ''
-    if (payload.body?.data) {
-      return atob(payload.body.data.replace(/-/g, '+').replace(/_/g, '/'))
-    }
-    if (payload.parts) {
-      for (const part of payload.parts) {
-        const text = extractBody(part)
-        if (text) return text
+
+    // Prefer text/html, fall back to text/plain
+    function findPart(p: any, mimeType: string): string {
+      if (!p) return ''
+      if (p.mimeType === mimeType && p.body?.data) {
+        return atob(p.body.data.replace(/-/g, '+').replace(/_/g, '/'))
       }
+      if (p.parts) {
+        for (const part of p.parts) {
+          const found = findPart(part, mimeType)
+          if (found) return found
+        }
+      }
+      return ''
     }
-    return ''
+
+    return findPart(payload, 'text/html') || findPart(payload, 'text/plain')
   }
 
   return { body: extractBody(data.payload), sentDate, senderEmail }
@@ -291,7 +288,14 @@ async function runSync(
   )
 
   const accessToken = await refreshAccessToken(conn.refresh_token)
-  const messages    = await searchEmails(accessToken, buildGmailQuery(daysBack), 50)
+  const { data: emailSources } = await supabase
+    .from('expense_email_sources')
+    .select('sender_email')
+    .eq('home_id', homeId)
+    .eq('is_active', true)
+  const knownSenders = (emailSources || []).map((s: any) => s.sender_email)
+  if (!knownSenders.length) return { new_orders: 0, skipped: 0, message: 'No email sources configured' }
+  const messages    = await searchEmails(accessToken, buildGmailQuery(daysBack, knownSenders), 50)
 
   if (!messages.length) {
     await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
@@ -311,11 +315,15 @@ async function runSync(
   }
 
   const emailPayloads: { text: string, platform: string, category: string }[] = []
-  for (const msg of messages.slice(0, 10)) {
-    const { body, sentDate, senderEmail } = await fetchEmailBody(accessToken, msg.id)
-    if (!body) continue
-    const source = senderEmail ? sourceMap[senderEmail] : null
-    if (!source) continue
+    const noMatchSenders: string[] = []
+    for (const msg of messages) {
+      const { body, sentDate, senderEmail } = await fetchEmailBody(accessToken, msg.id)
+      if (!body) continue
+      const source = senderEmail ? sourceMap[senderEmail] : null
+      if (!source) {
+        noMatchSenders.push(senderEmail || 'unknown')
+        continue
+      }
     const text = sentDate ? `EMAIL_DATE: ${sentDate}\n\n${body}` : body
     emailPayloads.push({ text, platform: source.platform, category: source.category })
   }
@@ -339,6 +347,7 @@ async function runSync(
     new_orders: saved.length,
     skipped:    skipped.length,
     message:    `Found ${extracted.length} orders, saved ${saved.length}, skipped ${skipped.length} duplicates`,
+    debug:      skipped,
   }
 }
 
@@ -350,15 +359,28 @@ async function runHistorySync(
   pageToken?: string,
 ) {
   const accessToken = await refreshAccessToken(conn.refresh_token)
-  const query = buildGmailQuery(90)
+  const { data: emailSources } = await supabase
+    .from('expense_email_sources')
+    .select('sender_email')
+    .eq('home_id', homeId)
+    .eq('is_active', true)
+  const knownSenders = (emailSources || []).map((s: any) => s.sender_email)
+  if (!knownSenders.length) return { pages: 0, new_orders: 0 }
+  const query = buildGmailQuery(90, knownSenders)
 
-  const url = `${GMAIL_API_BASE}/messages?q=${encodeURIComponent(query)}&maxResults=10${pageToken ? `&pageToken=${pageToken}` : ''}`
+  const url = `${GMAIL_API_BASE}/messages?q=${encodeURIComponent(query)}&maxResults=50${pageToken ? `&pageToken=${pageToken}` : ''}`
   const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
   if (!res.ok) throw new Error(`Gmail search failed: ${res.status}`)
   const data = await res.json()
 
   const messages: { id: string }[] = data.messages || []
   const nextPageToken = data.nextPageToken || null
+
+  await supabase.from('_sync_debug').insert({ data: { 
+    step: 'after_fetch',
+    messageCount: messages.length,
+    messageIds: messages.map((m: any) => m.id)
+  }})
 
   if (!messages.length) {
     await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
@@ -378,14 +400,27 @@ async function runHistorySync(
   }
 
   const emailPayloads: { text: string, platform: string, category: string }[] = []
+  const noMatchSenders: string[] = []
   for (const msg of messages) {
     const { body, sentDate, senderEmail } = await fetchEmailBody(accessToken, msg.id)
-    if (!body) continue
+    if (!body) { noMatchSenders.push(`no-body:${senderEmail}`); continue }
     const source = senderEmail ? sourceMap[senderEmail] : null
-    if (!source) continue // skip emails from unknown senders
+    if (!source) {
+      noMatchSenders.push(senderEmail || 'unknown')
+      continue
+    }
+    // skip emails from unknown senders
     const text = sentDate ? `EMAIL_DATE: ${sentDate}\n\n${body}` : body
     emailPayloads.push({ text, platform: source.platform, category: source.category })
   }
+  const { error: debugErr } = await supabase.from('_sync_debug').insert({ data: { 
+    noMatchSenders, 
+    sourceMapKeys: Object.keys(sourceMap),
+    messageCount: messages.length,
+    emailPayloadCount: emailPayloads.length,
+    resultSizeEstimate: data.resultSizeEstimate
+  }})
+  if (debugErr) console.error('Debug insert failed:', debugErr)
 
   let saved: any[] = []
   let skipped: any[] = []
@@ -411,6 +446,7 @@ async function runHistorySync(
     skipped:         skipped.length,
     next_page_token: nextPageToken,
     done:            !nextPageToken,
+    debug:           { noMatchSenders, sourceMapKeys: Object.keys(sourceMap), skipped },
   }
 }
 

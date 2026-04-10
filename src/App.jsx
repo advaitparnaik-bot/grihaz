@@ -10,7 +10,7 @@ import Profile from './components/Profile'
 import './App.css'
 import JoinHome from './pages/JoinHome'
 import HomeManagement from './components/HomeManagement'
-import { useGmailCallback } from './lib/gmailCallback'
+import { useGmailCallback, processPendingGmailCallback } from './lib/gmailCallback'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -56,6 +56,9 @@ export default function App() {
 
     setHomeLoading(false)
     setLoading(false)
+
+    // Process any pending Gmail OAuth callback
+    processPendingGmailCallback()
   }
 
   if (loading || homeLoading) return null
