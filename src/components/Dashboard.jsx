@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import AttendanceRow from './AttendanceRow'
 import AdhocEntryModal from './AdhocEntryModal'
 import './Dashboard.css'
+import AttendanceCalendar from './AttendanceCalendar'
 
 export default function Dashboard({ onNavigate }) {
   const [home, setHome] = useState(null)
@@ -13,6 +14,7 @@ export default function Dashboard({ onNavigate }) {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [showAdhoc, setShowAdhoc] = useState(false)
 
+  const [showCalendar, setShowCalendar] = useState(false)
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const displayDate = today.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -104,7 +106,17 @@ export default function Dashboard({ onNavigate }) {
       <main className="dash-main">
         <div className="dash-date-row">
           <span className="dash-date-text">{displayDate}</span>
-          <span className="dash-count-badge">{markedCount} / {scheduledStaff.length}</span>
+          <div className="dash-date-right">
+            <button className="dash-calendar-btn" onClick={() => setShowCalendar(true)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </button>
+            <span className="dash-count-badge">{markedCount} / {scheduledStaff.length}</span>
+          </div>
         </div>
 
         <section className="dash-section">
@@ -163,6 +175,13 @@ export default function Dashboard({ onNavigate }) {
           homeId={home.id}
           onClose={() => setShowAdhoc(false)}
           onAdded={() => setShowAdhoc(false)}
+        />
+      )}
+      {showCalendar && (
+        <AttendanceCalendar
+          home={home}
+          staff={staff}
+          onClose={() => setShowCalendar(false)}
         />
       )}
     </div>
