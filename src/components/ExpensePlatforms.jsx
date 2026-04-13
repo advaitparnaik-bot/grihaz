@@ -107,7 +107,7 @@ export default function ExpensePlatforms({ home, onClose }) {
         .eq('home_id', home.id)
         .eq('platform', editingPlatform)
     }
-    } else {
+    else {
       const rows = validEmails.map(email => ({
         home_id: home.id,
         platform: name.toLowerCase(),
