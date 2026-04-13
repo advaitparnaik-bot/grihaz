@@ -100,6 +100,13 @@ export default function ExpensePlatforms({ home, onClose }) {
         is_active: true,
       }))
       await supabase.from('expense_email_sources').insert(rows)
+       // Sync category change to existing orders
+    await supabase
+        .from('expense_orders')
+        .update({ category })
+        .eq('home_id', home.id)
+        .eq('platform', editingPlatform)
+    }
     } else {
       const rows = validEmails.map(email => ({
         home_id: home.id,
