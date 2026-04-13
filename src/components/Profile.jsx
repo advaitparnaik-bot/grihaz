@@ -11,6 +11,8 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
   // showExpensePlatforms is now controlled by App.jsx via props
   const [actionLoading, setActionLoading] = useState(false)
+  const [syncingGmail, setSyncingGmail] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
 
   useEffect(() => {
     fetchGmailConnection()
@@ -54,6 +56,31 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
     setGmailConnection(null)
     setShowDisconnectConfirm(false)
     setActionLoading(false)
+  }
+  
+  async function handleSyncNow() {
+    setSyncingGmail(true)
+    setSyncResult(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gmail-sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'sync',
+          home_id: home.id,
+        }),
+      })
+      const data = await res.json()
+      setSyncResult(data.new_orders ?? 0)
+      await fetchGmailConnection()
+    } catch (err) {
+      setSyncResult(-1)
+    }
+    setSyncingGmail(false)
   }
 
   async function handleSignOut() {
@@ -125,15 +152,29 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
                   <div className="profile-gmail-dot" />
                   <div>
                     <div className="profile-gmail-address">{gmailConnection.gmail_address}</div>
-                    <div className="profile-gmail-synced">{formatLastSynced(gmailConnection.last_synced_at)}</div>
+                    <div className="profile-gmail-synced">
+                      {syncingGmail ? 'Syncing…' : syncResult !== null
+                        ? syncResult === -1 ? 'Sync failed' : syncResult === 0 ? 'Already up to date' : `${syncResult} new order${syncResult !== 1 ? 's' : ''} added`
+                        : formatLastSynced(gmailConnection.last_synced_at)}
+                    </div>
                   </div>
                 </div>
-                <button
-                  className="profile-gmail-disconnect-btn"
-                  onClick={() => setShowDisconnectConfirm(true)}
-                >
-                  Disconnect
-                </button>
+                <div className="profile-gmail-actions">
+                  <button
+                    className="profile-gmail-sync-btn"
+                    onClick={handleSyncNow}
+                    disabled={syncingGmail}
+                  >
+                    {syncingGmail ? 'Syncing…' : 'Sync Now'}
+                  </button>
+                  <button
+                    className="profile-gmail-disconnect-btn"
+                    onClick={() => setShowDisconnectConfirm(true)}
+                    disabled={syncingGmail}
+                  >
+                    Disconnect
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="profile-gmail-empty">
