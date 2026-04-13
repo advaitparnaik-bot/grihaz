@@ -279,3 +279,25 @@
 .ep-sheet-footer .btn-primary {
   flex: 1;
 }
+.ep-card-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.ep-edit-btn {
+  background: none;
+  border: none;
+  color: var(--ink-mid);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ep-platform-name-readonly {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 10px 0 4px;
+}

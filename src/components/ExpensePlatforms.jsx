@@ -15,6 +15,7 @@ export default function ExpensePlatforms({ home, onClose }) {
   const [showSheet, setShowSheet] = useState(false)
   const [deleting, setDeleting] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [editingPlatform, setEditingPlatform] = useState(null)
 
   // Form state
   const [platformName, setPlatformName] = useState('')
@@ -31,7 +32,6 @@ export default function ExpensePlatforms({ home, onClose }) {
       .eq('home_id', home.id)
       .eq('is_active', true)
       .order('platform')
-    // Group by platform
     const grouped = {}
     for (const row of data || []) {
       if (!grouped[row.platform]) {
@@ -43,15 +43,25 @@ export default function ExpensePlatforms({ home, onClose }) {
     setLoading(false)
   }
 
-  function openSheet() {
+  function openAddSheet() {
+    setEditingPlatform(null)
     setPlatformName('')
     setCategory('shopping')
     setSenderEmails([''])
     setShowSheet(true)
   }
 
+  function openEditSheet(p) {
+    setEditingPlatform(p.platform)
+    setPlatformName(p.platform)
+    setCategory(p.category)
+    setSenderEmails(p.senders.length > 0 ? p.senders : [''])
+    setShowSheet(true)
+  }
+
   function closeSheet() {
     setShowSheet(false)
+    setEditingPlatform(null)
   }
 
   function addEmailField() {
@@ -73,19 +83,37 @@ export default function ExpensePlatforms({ home, onClose }) {
     if (!validEmails.length) return
 
     setSaving(true)
-    const rows = validEmails.map(email => ({
-      home_id: home.id,
-      platform: name.toLowerCase(),
-      category,
-      sender_email: email,
-      is_active: true,
-    }))
-    const { error } = await supabase.from('expense_email_sources').insert(rows)
-    if (!error) {
-      closeSheet()
-      loadPlatforms()
+
+    if (editingPlatform) {
+      // Delete existing rows for this platform then re-insert
+      await supabase
+        .from('expense_email_sources')
+        .delete()
+        .eq('home_id', home.id)
+        .eq('platform', editingPlatform)
+
+      const rows = validEmails.map(email => ({
+        home_id: home.id,
+        platform: editingPlatform,
+        category,
+        sender_email: email,
+        is_active: true,
+      }))
+      await supabase.from('expense_email_sources').insert(rows)
+    } else {
+      const rows = validEmails.map(email => ({
+        home_id: home.id,
+        platform: name.toLowerCase(),
+        category,
+        sender_email: email,
+        is_active: true,
+      }))
+      await supabase.from('expense_email_sources').insert(rows)
     }
+
     setSaving(false)
+    closeSheet()
+    loadPlatforms()
   }
 
   async function handleDelete(platform) {
@@ -109,7 +137,7 @@ export default function ExpensePlatforms({ home, onClose }) {
           </svg>
         </button>
         <span className="ep-header-title">Expense Platforms</span>
-        <button className="ep-add-btn" onClick={openSheet}>
+        <button className="ep-add-btn" onClick={openAddSheet}>
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <path d="M10 4V16M4 10H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
@@ -137,13 +165,21 @@ export default function ExpensePlatforms({ home, onClose }) {
                       {CATEGORIES.find(c => c.value === p.category)?.label || p.category}
                     </span>
                   </div>
-                  <button
-                    className="ep-delete-btn"
-                    onClick={() => handleDelete(p.platform)}
-                    disabled={deleting === p.platform}
-                  >
-                    {deleting === p.platform ? '…' : 'Remove'}
-                  </button>
+                  <div className="ep-card-actions">
+                    <button
+                      className="ep-edit-btn"
+                      onClick={() => openEditSheet(p)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="ep-delete-btn"
+                      onClick={() => handleDelete(p.platform)}
+                      disabled={deleting === p.platform}
+                    >
+                      {deleting === p.platform ? '…' : 'Remove'}
+                    </button>
+                  </div>
                 </div>
                 <div className="ep-senders">
                   {p.senders.map(s => (
@@ -156,12 +192,14 @@ export default function ExpensePlatforms({ home, onClose }) {
         )}
       </div>
 
-      {/* Add platform bottom sheet */}
+      {/* Add / Edit platform bottom sheet */}
       {showSheet && (
         <div className="ep-overlay">
           <div className="ep-sheet">
             <div className="ep-sheet-header">
-              <span className="ep-sheet-title">Add Platform</span>
+              <span className="ep-sheet-title">
+                {editingPlatform ? 'Edit Platform' : 'Add Platform'}
+              </span>
               <button className="ep-sheet-close" onClick={closeSheet}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -171,12 +209,18 @@ export default function ExpensePlatforms({ home, onClose }) {
             <div className="ep-sheet-body">
               <div className="form-field">
                 <label>Platform name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Amazon, Zomato, Myntra"
-                  value={platformName}
-                  onChange={e => setPlatformName(e.target.value)}
-                />
+                {editingPlatform ? (
+                  <div className="ep-platform-name-readonly">
+                    {editingPlatform.charAt(0).toUpperCase() + editingPlatform.slice(1)}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="e.g. Amazon, Zomato, Myntra"
+                    value={platformName}
+                    onChange={e => setPlatformName(e.target.value)}
+                  />
+                )}
               </div>
               <div className="form-field">
                 <label>Category</label>
@@ -215,7 +259,7 @@ export default function ExpensePlatforms({ home, onClose }) {
             <div className="ep-sheet-footer">
               <button className="btn-ghost" onClick={closeSheet}>Cancel</button>
               <button className="btn-primary" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : 'Save Platform'}
+                {saving ? 'Saving…' : editingPlatform ? 'Save Changes' : 'Save Platform'}
               </button>
             </div>
           </div>
