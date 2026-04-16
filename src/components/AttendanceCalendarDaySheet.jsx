@@ -53,13 +53,15 @@ export default function AttendanceCalendarDaySheet({ home, staff, date, settledS
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const upserts = Object.entries(attendance).map(([staffId, status]) => ({
-        staff_id: staffId,
-        home_id: home.id,
-        date: dateStr,
-        status,
-        marked_by: user.id,
-      }))
+      const upserts = Object.entries(attendance)
+        .filter(([staffId]) => !settledStaffIds.includes(staffId)) // ← only unsettled staff
+        .map(([staffId, status]) => ({
+          staff_id: staffId,
+          home_id: home.id,
+          date: dateStr,
+          status,
+          marked_by: user.id,
+        }))
       if (upserts.length) {
         await supabase.from('attendance')
           .upsert(upserts, { onConflict: 'staff_id,date', ignoreDuplicates: false })
