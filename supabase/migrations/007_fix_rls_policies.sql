@@ -22,10 +22,10 @@ CREATE POLICY "homes_delete" ON homes FOR DELETE TO authenticated
 
 -- HOME_MEMBERS: user can only see members of their own home
 CREATE POLICY "home_members_select" ON home_members FOR SELECT TO authenticated
-  USING (home_id IN (SELECT home_id FROM home_members WHERE user_id = auth.uid()));
+  USING (user_id = auth.uid());
 
 CREATE POLICY "home_members_insert" ON home_members FOR INSERT TO authenticated
-  WITH CHECK (home_id IN (SELECT home_id FROM home_members WHERE user_id = auth.uid()));
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "home_members_update" ON home_members FOR UPDATE TO authenticated
   USING (home_id IN (SELECT home_id FROM home_members WHERE user_id = auth.uid()));
