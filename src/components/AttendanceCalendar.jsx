@@ -31,7 +31,8 @@ export default function AttendanceCalendar({ home, staff, onClose }) {
   async function loadMonthData() {
     setLoading(true)
     const firstStr = `${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, '0')}-01`
-s
+    const daysInMonth = new Date(viewMonth.year, viewMonth.month + 1, 0).getDate()
+    const lastStr = `${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`
 
     // Fetch attendance for this month
     const { data: attData } = await supabase
