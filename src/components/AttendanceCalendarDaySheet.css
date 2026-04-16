@@ -1,0 +1,131 @@
+.acds-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.acds-sheet {
+  background: var(--paper);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 20px 16px 32px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.acds-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.acds-date {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.acds-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-mid);
+  display: flex;
+  align-items: center;
+}
+
+.acds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.acds-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.acds-staff-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.acds-status-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.acds-status-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink-mid);
+}
+
+.acds-status-btn--present.acds-status-btn--active {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: #4caf50;
+  color: #2e7d32;
+}
+
+.acds-status-btn--absent_paid.acds-status-btn--active {
+  background: rgba(255, 152, 0, 0.15);
+  border-color: #ff9800;
+  color: #e65100;
+}
+
+.acds-status-btn--absent_unpaid.acds-status-btn--active {
+  background: rgba(244, 67, 54, 0.12);
+  border-color: #f44336;
+  color: #c62828;
+}
+
+.acds-settled-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acds-status-label {
+  font-size: 13px;
+  color: var(--ink-mid);
+  text-transform: capitalize;
+}
+
+.acds-settled-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2e7d32;
+  background: rgba(76, 175, 80, 0.12);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.acds-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.acds-loading,
+.acds-empty {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--ink-mid);
+  font-size: 14px;
+}
