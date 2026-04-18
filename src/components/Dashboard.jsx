@@ -188,6 +188,14 @@ export default function Dashboard({ onNavigate }) {
           onAdded={() => setShowAdhoc(false)}
         />
       )}
+      {showCalendar && (
+        <AttendanceCalendar
+          home={home}
+          staff={staff}
+          onClose={() => setShowCalendar(false)}
+        />
+      )}
+      
     </div>
   )
 }
