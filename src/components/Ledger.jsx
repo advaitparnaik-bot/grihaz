@@ -173,39 +173,49 @@ export default function Ledger() {
 
       let laundryEntries = []
 
-      if (typeFilter === 'all' || typeFilter === 'laundry') {
-        const { data: ltData } = await supabase
-          .from('laundry_transactions')
-          .select(`
-            *,
-            laundry_transaction_items(*),
-            created_profile:profiles!laundry_transactions_created_by_fkey(display_name),
-            closed_profile:profiles!laundry_transactions_closed_by_fkey(display_name)
-          `)
-          .eq('home_id', homeId)
-          .eq('status', 'closed')
-          .gte('created_at', from)
-          .lte('created_at', to)
-          .order('created_at', { ascending: false })
+    if (typeFilter === 'all' || typeFilter === 'laundry') {
+      const { data: ltData } = await supabase
+        .from('laundry_transactions')
+        .select(`*, laundry_transaction_items(*)`)
+        .eq('home_id', homeId)
+        .eq('status', 'closed')
+        .gte('created_at', from)
+        .lte('created_at', to)
+        .order('created_at', { ascending: false })
 
-        laundryEntries = (ltData || []).map(t => ({
-          id: t.id,
-          type: 'laundry',
-          date: t.created_at?.split('T')[0],
-          closed_at: t.closed_at,
-          created_at: t.created_at,
-          created_by_name: t.created_profile?.display_name || '—',
-          closed_by_name: t.closed_profile?.display_name || '—',
-          items: t.laundry_transaction_items || [],
-          amount: (t.laundry_transaction_items || []).reduce(
-            (sum, i) => sum + (i.unit_price * i.quantity_given), 0
-          ),
-          raw: t,
-        }))
+      // Get unique user IDs to resolve names
+      const userIds = [...new Set([
+        ...(ltData || []).map(t => t.created_by).filter(Boolean),
+        ...(ltData || []).map(t => t.closed_by).filter(Boolean),
+      ])]
+
+      let profileMap = {}
+      if (userIds.length) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', userIds)
+        ;(profilesData || []).forEach(p => { profileMap[p.id] = p.display_name })
       }
 
-      const combined = [...staffEntries, ...expenseEntries, ...laundryEntries]
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+      laundryEntries = (ltData || []).map(t => ({
+        id: t.id,
+        type: 'laundry',
+        date: t.created_at?.split('T')[0],
+        closed_at: t.closed_at,
+        created_at: t.created_at,
+        created_by_name: profileMap[t.created_by] || '—',
+        closed_by_name: profileMap[t.closed_by] || '—',
+        items: t.laundry_transaction_items || [],
+        amount: (t.laundry_transaction_items || []).reduce(
+          (sum, i) => sum + (i.unit_price * i.quantity_given), 0
+        ),
+        raw: t,
+      }))
+    }
+
+    const combined = [...staffEntries, ...expenseEntries, ...laundryEntries]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
 
       setEntries(combined)
     } catch (err) { console.error(err) }
@@ -344,6 +354,7 @@ export default function Ledger() {
               { value: 'all', label: 'All' },
               { value: 'staff', label: 'Staff' },
               { value: 'expenses', label: 'Expenses' },
+              { value: 'laundry', label: 'Laundry' },
             ].map(o => (
               <button key={o.value} className={`tr-chip ${typeFilter === o.value ? 'tr-chip--active' : ''}`}
                 onClick={() => {
@@ -428,6 +439,51 @@ export default function Ledger() {
         ) : (
           <div className="tr-list">
             {entries.map(e => {
+
+              if (e.type === 'laundry') {
+                const expanded = expandedOrders.has(e.id)
+                const dropOffDate = new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                const closedDate = e.closed_at
+                  ? new Date(e.closed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                  : '—'
+                return (
+                  <div key={`laundry-${e.id}`} className="tr-card tr-card--laundry">
+                    <div className="tr-card-left">
+                      <div className="tr-date">{dropOffDate}</div>
+                      <div className="tr-dot tr-dot--laundry" />
+                    </div>
+                    <div className="tr-card-body">
+                      <div className="tr-staff">Drop-off {dropOffDate} · Returned {closedDate}</div>
+                      {expanded && (
+                        <div className="tr-items">
+                          {e.items.map(item => (
+                            <div key={item.id} className="tr-item-row">
+                              <span className="tr-item-name">{item.category} · {item.service}</span>
+                              <span className="tr-item-price">
+                                {item.quantity_given} × ₹{Number(item.unit_price).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="tr-item-row tr-item-row--meta">
+                            <span className="tr-item-name">Dropped by</span>
+                            <span className="tr-item-price">{e.created_by_name}</span>
+                          </div>
+                          <div className="tr-item-row tr-item-row--meta">
+                            <span className="tr-item-name">Returned by</span>
+                            <span className="tr-item-price">{e.closed_by_name}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="tr-card-right">
+                      <div className="tr-amount">₹{e.amount.toLocaleString('en-IN')}</div>
+                      <button className="tr-expand-btn" onClick={() => toggleExpand(e.id)}>
+                        {expanded ? '▲' : '▼'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              }
               if (e.type === 'expense') {
                 const expanded = expandedOrders.has(e.id)
                 return (
