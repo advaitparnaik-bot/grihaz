@@ -244,3 +244,14 @@ button.secondary {
 button.secondary:hover {
   background: #f5f5f5;
 }
+.login-legal {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 0.72rem;
+  color: #8A7060;
+}
+.login-legal a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

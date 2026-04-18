@@ -69,6 +69,11 @@ export default function Login() {
             </button>
           </div>
         )}
+        <p className="login-legal">
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+          {' · '}
+          <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Use</a>
+        </p>
       </div>
     </div>
   )
