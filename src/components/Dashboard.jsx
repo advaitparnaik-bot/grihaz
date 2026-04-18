@@ -4,6 +4,7 @@ import AttendanceRow from './AttendanceRow'
 import AdhocEntryModal from './AdhocEntryModal'
 import './Dashboard.css'
 import AttendanceCalendar from './AttendanceCalendar'
+import Laundry from './Laundry'
 
 export default function Dashboard({ onNavigate }) {
   const [home, setHome] = useState(null)
@@ -15,6 +16,7 @@ export default function Dashboard({ onNavigate }) {
   const [showAdhoc, setShowAdhoc] = useState(false)
 
   const [showCalendar, setShowCalendar] = useState(false)
+  const [showLaundry, setShowLaundry] = useState(false)
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const displayDate = today.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -101,6 +103,10 @@ export default function Dashboard({ onNavigate }) {
     </div>
   )
 
+  if (showLaundry) {
+  return <Laundry home={home} onClose={() => setShowLaundry(false)} />
+  }
+
   return (
     <div className="dash-root">
       <main className="dash-main">
@@ -162,6 +168,11 @@ export default function Dashboard({ onNavigate }) {
           )}
         </section>
 
+        <button className="dash-laundry-btn" onClick={() => setShowLaundry(true)}>
+          🧺 Laundry
+        </button>
+          
+
         <button className="dash-adhoc-btn" onClick={() => setShowAdhoc(true)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -175,13 +186,6 @@ export default function Dashboard({ onNavigate }) {
           homeId={home.id}
           onClose={() => setShowAdhoc(false)}
           onAdded={() => setShowAdhoc(false)}
-        />
-      )}
-      {showCalendar && (
-        <AttendanceCalendar
-          home={home}
-          staff={staff}
-          onClose={() => setShowCalendar(false)}
         />
       )}
     </div>

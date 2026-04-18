@@ -1,0 +1,145 @@
+.ldy-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-bg);
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.ldy-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ldy-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.ldy-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.ldy-main {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ldy-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--color-primary, #c84b2f);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+.ldy-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.ldy-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--color-text-muted);
+}
+
+.ldy-empty p { margin: 0 0 6px; }
+.ldy-empty-hint { font-size: 13px; }
+
+.ldy-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.ldy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ldy-card {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.ldy-card:active { opacity: 0.7; }
+
+.ldy-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ldy-card-date {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.ldy-card-pending {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary, #c84b2f);
+  background: #fef3ee;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.ldy-card-summary {
+  font-size: 14px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ldy-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border);
+}
+
+.ldy-card-total {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.ldy-card-action {
+  font-size: 13px;
+  color: var(--color-primary, #c84b2f);
+  font-weight: 600;
+}

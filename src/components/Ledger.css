@@ -140,15 +140,54 @@
 }
 
 .tr-item-row {
-  display: flex; justify-content: space-between;
-  font-size: 0.75rem; color: var(--ink-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
 }
 
-.tr-item-name { flex: 1; margin-right: 8px; }
-.tr-item-price { flex-shrink: 0; font-weight: 600; color: var(--ink); }
+.tr-item-name {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  text-align: left;
+}
+
+.tr-item-price {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+}
 
 .tr-expand-btn {
   background: none; border: none; cursor: pointer;
   font-size: 0.65rem; color: var(--ink-soft);
   padding: 2px 4px; margin-top: 2px;
+}
+.tr-card--laundry {
+  border-left: 3px solid var(--ink-faint);
+}
+
+.tr-dot--laundry {
+  background: #4A90D9;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tr-laundry-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--border);
+  padding: 2px 6px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tr-item-row--meta {
+  opacity: 0.7;
+  font-style: italic;
 }

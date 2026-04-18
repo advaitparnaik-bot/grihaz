@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import './HomeManagement.css'
+import LaundryRateCard from './LaundryRateCard'
 
 function initials(name) {
   if (!name) return '?'
@@ -233,7 +234,11 @@ export default function HomeManagement({ onBack }) {
             {inviteCopied ? '✓ Link copied!' : 'Add Member — Copy Invite Link'}
           </button>
         </section>
-
+        {/* Laundry Rate Card */}
+        <section className="hm-section">
+          <div className="hm-section-label">Laundry Rate Card</div>
+          <LaundryRateCard homeId={home?.id} />
+        </section>
       </main>
     </div>
   )

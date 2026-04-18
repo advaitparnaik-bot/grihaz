@@ -82,9 +82,12 @@ export default function Settlement() {
   const [settleForm, setSettleForm] = useState({ amount: '', mode: 'cash' })
   const [saving, setSaving] = useState(false)
   const [expenseTotal, setExpenseTotal] = useState({ total: 0, byCategory: {} })
+  const [laundryData, setLaundryData] = useState({ transactions: [], total: 0, settlement: null })
+  const [settlingLaundry, setSettlingLaundry] = useState(false)
+  const [laundrySettleForm, setLaundrySettleForm] = useState({ amount: '', mode: 'cash' })
 
+  useEffect(() => { if (homeId) { loadSummaries(); loadExpenses(); loadLaundry() } }, [homeId, selectedMonth])
   useEffect(() => { loadHome() }, [])
-  useEffect(() => { if (homeId) { loadSummaries(); loadExpenses() } }, [homeId, selectedMonth])
 
   async function loadHome() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -194,6 +197,40 @@ async function loadExpenses() {
   setExpenseTotal({ total, byCategory })
 }
 
+async function loadLaundry() {
+  const monthDate = new Date(selectedMonth)
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+  const firstDay = selectedMonth
+  const lastDayDate = new Date(year, month + 1, 0)
+  const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1).padStart(2,'0')}-${String(lastDayDate.getDate()).padStart(2,'0')}`
+
+  const { data: transactions } = await supabase
+    .from('laundry_transactions')
+    .select('*, laundry_transaction_items(*)')
+    .eq('home_id', homeId)
+    .eq('status', 'closed')
+    .gte('closed_at', firstDay)
+    .lte('closed_at', lastDay + 'T23:59:59')
+    .order('closed_at', { ascending: true })
+
+  const total = (transactions || []).reduce((sum, t) => {
+    const tTotal = (t.laundry_transaction_items || []).reduce(
+      (s, i) => s + (i.unit_price * i.quantity_given), 0
+    )
+    return sum + tTotal
+  }, 0)
+
+  const { data: settlement } = await supabase
+    .from('laundry_settlements')
+    .select('*')
+    .eq('home_id', homeId)
+    .eq('month', firstDay)
+    .maybeSingle()
+
+  setLaundryData({ transactions: transactions || [], total, settlement: settlement || null })
+}
+
   function openSettle(summary) {
     setSettleForm({ amount: summary.payout.toString(), mode: 'cash' })
     setSettling(summary.staff.id)
@@ -217,6 +254,29 @@ async function loadExpenses() {
       if (error) throw error
       setSettling(null)
       loadSummaries()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to settle. Please try again.')
+    }
+    setSaving(false)
+  }
+
+  async function handleLaundrySettle() {
+    if (!laundrySettleForm.amount || !laundrySettleForm.mode) return
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase.from('laundry_settlements').insert([{
+        home_id: homeId,
+        month: selectedMonth,
+        amount_paid: parseFloat(laundrySettleForm.amount),
+        payment_mode: laundrySettleForm.mode,
+        paid_at: new Date().toISOString(),
+        paid_by: user.id,
+      }])
+      if (error) throw error
+      setSettlingLaundry(false)
+      loadLaundry()
     } catch (err) {
       console.error(err)
       alert('Failed to settle. Please try again.')
@@ -280,6 +340,52 @@ async function loadExpenses() {
       </div>
 
       <main className="set-main">
+        {laundryData.transactions.length > 0 && (
+          <div className={`set-card ${laundryData.settlement ? 'set-card--settled' : ''}`}>
+            <div className="set-card-top">
+              <div className="sm-avatar">🧺</div>
+              <div className="sm-info">
+                <div className="sm-name">Laundry</div>
+                <div className="sm-role">{laundryData.transactions.length} drop-off{laundryData.transactions.length > 1 ? 's' : ''} returned</div>
+              </div>
+              {laundryData.settlement ? (
+                <span className="set-badge set-badge--settled">Settled</span>
+              ) : (
+                <span className="set-badge set-badge--outstanding">Outstanding</span>
+              )}
+            </div>
+
+            <div className="set-breakdown">
+              {laundryData.transactions.map(t => {
+                const tTotal = (t.laundry_transaction_items || []).reduce(
+                  (s, i) => s + (i.unit_price * i.quantity_given), 0
+                )
+                return (
+                  <div key={t.id} className="set-breakdown-item">
+                    <span>Returned {new Date(t.closed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                    <span>₹{Math.round(tTotal).toLocaleString('en-IN')}</span>
+                  </div>
+                )
+              })}
+              <div className="set-breakdown-item set-breakdown-item--total">
+                <span>Total Payable</span>
+                <span>₹{Math.round(laundryData.total).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            {laundryData.settlement ? (
+              <div className="set-settled-info">
+                Paid ₹{laundryData.settlement.amount_paid.toLocaleString('en-IN')} via {laundryData.settlement.payment_mode.toUpperCase()}
+                {' · '}{new Date(laundryData.settlement.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+              </div>
+            ) : (
+              <button className="btn-primary set-settle-btn" 
+                onClick={() => { setLaundrySettleForm({ amount: Math.round(laundryData.total).toString(), mode: 'cash' }); setSettlingLaundry(true) }}>
+                Settle
+              </button>
+            )}
+          </div>
+        )}
         {loading ? (
           <div className="sm-loading"><div className="dash-spinner" />Loading…</div>
         ) : staffSummaries.length === 0 ? (
@@ -394,6 +500,45 @@ async function loadExpenses() {
             <div className="modal-footer">
               <button className="btn-ghost" onClick={() => setSettling(null)}>Cancel</button>
               <button className="btn-primary" onClick={handleSettle} disabled={saving}>
+                {saving ? 'Saving…' : 'Confirm Settlement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {settlingLaundry && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setSettlingLaundry(false)}>
+          <div className="modal-sheet modal-sheet--confirm">
+            <div className="modal-header">
+              <h3>Settle Laundry</h3>
+              <button className="modal-close" onClick={() => setSettlingLaundry(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-field">
+                <label>Amount (₹)</label>
+                <input type="number" min="0" value={laundrySettleForm.amount}
+                  onChange={e => setLaundrySettleForm(p => ({ ...p, amount: e.target.value }))} />
+              </div>
+              <div className="form-field">
+                <label>Mode</label>
+                <div className="adhoc-toggle-row">
+                  {['cash', 'upi'].map(m => (
+                    <button key={m} type="button"
+                      className={`adhoc-toggle-btn ${laundrySettleForm.mode === m ? 'adhoc-toggle-btn--active' : ''}`}
+                      onClick={() => setLaundrySettleForm(p => ({ ...p, mode: m }))}>
+                      {m.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-ghost" onClick={() => setSettlingLaundry(false)}>Cancel</button>
+              <button className="btn-primary" onClick={handleLaundrySettle} disabled={saving}>
                 {saving ? 'Saving…' : 'Confirm Settlement'}
               </button>
             </div>
