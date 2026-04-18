@@ -249,3 +249,21 @@ body {
 .dash-calendar-btn:hover {
   background: var(--paper-dark, #f0ebe3);
 }
+.dash-laundry-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 20px;
+  width: 100%;
+  background: var(--cream);
+  border: 1.5px dashed var(--saffron);
+  border-radius: var(--radius);
+  color: var(--saffron);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dash-laundry-btn:hover { background: var(--saffron-dim); }

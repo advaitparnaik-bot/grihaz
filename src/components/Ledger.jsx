@@ -171,7 +171,40 @@ export default function Ledger() {
         }))
       }
 
-      const combined = [...staffEntries, ...expenseEntries]
+      let laundryEntries = []
+
+      if (typeFilter === 'all' || typeFilter === 'laundry') {
+        const { data: ltData } = await supabase
+          .from('laundry_transactions')
+          .select(`
+            *,
+            laundry_transaction_items(*),
+            created_profile:profiles!laundry_transactions_created_by_fkey(display_name),
+            closed_profile:profiles!laundry_transactions_closed_by_fkey(display_name)
+          `)
+          .eq('home_id', homeId)
+          .eq('status', 'closed')
+          .gte('created_at', from)
+          .lte('created_at', to)
+          .order('created_at', { ascending: false })
+
+        laundryEntries = (ltData || []).map(t => ({
+          id: t.id,
+          type: 'laundry',
+          date: t.created_at?.split('T')[0],
+          closed_at: t.closed_at,
+          created_at: t.created_at,
+          created_by_name: t.created_profile?.display_name || '—',
+          closed_by_name: t.closed_profile?.display_name || '—',
+          items: t.laundry_transaction_items || [],
+          amount: (t.laundry_transaction_items || []).reduce(
+            (sum, i) => sum + (i.unit_price * i.quantity_given), 0
+          ),
+          raw: t,
+        }))
+      }
+
+      const combined = [...staffEntries, ...expenseEntries, ...laundryEntries]
         .sort((a, b) => new Date(b.date) - new Date(a.date))
 
       setEntries(combined)
