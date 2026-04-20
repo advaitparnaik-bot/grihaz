@@ -18,11 +18,12 @@ export default function CreateHome({ user, onHomeCreated }) {
       return
     }
 
-    const { data: home, error: homeError } = await supabase
+    const homeId = crypto.randomUUID()
+    const { error: homeError } = await supabase
       .from('homes')
-      .insert({ name: name.trim(), created_by: session.user.id })
-      .select()
-      .single()
+      .insert({ id: homeId, name: name.trim(), created_by: session.user.id })
+
+    const home = { id: homeId, name: name.trim() }
 
     if (homeError) {
       setError(homeError.message)
