@@ -11,9 +11,16 @@ export default function CreateHome({ user, onHomeCreated }) {
     setLoading(true)
     setError('')
 
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setError('Session expired. Please refresh and try again.')
+      setLoading(false)
+      return
+    }
+
     const { data: home, error: homeError } = await supabase
       .from('homes')
-      .insert({ name: name.trim(), created_by: user.id })
+      .insert({ name: name.trim(), created_by: session.user.id })
       .select()
       .single()
 
