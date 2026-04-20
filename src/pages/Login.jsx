@@ -12,7 +12,7 @@ export default function Login() {
   setLoading(true)
   setError('')
 
-  const redirectTo = import.meta.env.VITE_APP_URL || window.location.origin
+  const redirectTo = window.location.origin
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
