@@ -151,18 +151,18 @@ async function fetchEmailBody(accessToken: string, messageId: string): Promise<{
 }
 // ─── Anthropic extraction ─────────────────────────────────────────────────────
 
-function buildExtractionPrompt(emailTexts: string[]): string {
+function buildExtractionPrompt(emailTexts: string[], platforms: string[]): string {
   return `You are a data extraction assistant for a household expense tracker.
 
-Extract order data from the following email(s) from Blinkit, Zomato, or Amazon India.
+Extract order data from the following email(s).
 
 Return ONLY a valid JSON array. No markdown, no explanation, no preamble.
 
 Schema:
 [
   {
-    "platform": "blinkit" | "zomato" | "amazon",
-    "order_date": "YYYY-MM-DD — look for 'Order placed', 'Order date', 'Ordered on' in the body first. For Zomato look for the delivery date. Fall back to EMAIL_DATE only if nothing found in body.",
+    "platform": one of: ${platforms.join(', ')},
+    "order_date": "YYYY-MM-DD — look for explicit order/purchase date in the body. Fall back to EMAIL_DATE if not found. Never use shipping or delivery dates.",
     "order_ref": "order ID string or null",
     "order_total": number (INR, numeric only),
     "items": [
@@ -176,16 +176,16 @@ Rules:
 - Skip emails with no clear order details.
 - Dates must be YYYY-MM-DD in IST.
 - Do not invent data. Use null if unavailable.
-- For Zomato: if item prices not listed, use one item: { item_name: "Food order", quantity: 1, unit: null, unit_price: <total> }
-- For Amazon: item prices = individual item price, not order total.
-- For Amazon: order date is near text like 'Order Placed', 'Ordered on', or 'Order Date'. Do NOT use shipping or delivery dates.
+- For order_date: look for explicit order/purchase date in the email body first. If not found, use EMAIL_DATE. Never use shipping, dispatch, or delivery dates.
+- For food/restaurant orders: if item prices not listed, use one item: { item_name: "Food order", quantity: 1, unit: null, unit_price: <total> }
+- For shopping orders: item prices = individual item price, not order total.
 
 Emails:
 ---
 ${emailTexts.map((t, i) => `EMAIL ${i + 1}:\n${t.slice(0, 6000)}`).join('\n\n---\n\n')}`
 }
 
-async function extractOrdersFromEmails(emailTexts: string[]) {
+async function extractOrdersFromEmails(emailTexts: string[], platforms: string[]) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -196,7 +196,7 @@ async function extractOrdersFromEmails(emailTexts: string[]) {
     body: JSON.stringify({
       model:      'claude-sonnet-4-20250514',
       max_tokens: 4000,
-      messages:   [{ role: 'user', content: buildExtractionPrompt(emailTexts) }],
+      messages:   [{ role: 'user', content: buildExtractionPrompt(emailTexts, platforms) }],
     }),
   })
   if (!res.ok) throw new Error(`Anthropic API failed: ${res.status}`)
@@ -229,8 +229,8 @@ async function saveOrders(supabase: any, homeId: string, userId: string, orders:
       .maybeSingle()
     if (existing) {
       const updates: any = {}
-      if (!existing.order_date && order.order_date) updates.order_date = order.order_date
-      if (!existing.order_total && order.order_total) updates.order_total = order.order_total
+      if (order.order_date && (!existing.order_date || order.order_date < existing.order_date)) updates.order_date = order.order_date
+      if (order.order_total && order.order_total > existing.order_total) updates.order_total = order.order_total
       if (!existing.notes && order.notes) updates.notes = order.notes
       if (Object.keys(updates).length > 0) {
         await supabase.from('expense_orders').update(updates).eq('id', existing.id)
@@ -305,7 +305,7 @@ async function runSync(
     .eq('is_active', true)
   const knownSenders = (emailSources || []).map((s: any) => s.sender_email)
   if (!knownSenders.length) return { new_orders: 0, skipped: 0, message: 'No email sources configured' }
-  const messages    = await searchEmails(accessToken, buildGmailQuery(daysBack, knownSenders), 10)
+  const messages = await searchEmails(accessToken, buildGmailQuery(daysBack, knownSenders), 50)
 
   if (!messages.length) {
     await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
@@ -315,7 +315,7 @@ async function runSync(
   // Look up sender → category mapping for this home
   const { data: sources } = await supabase
     .from('expense_email_sources')
-    .select('sender_email, platform, category')
+    .select('sender_email, platform, category') 
     .eq('home_id', homeId)
     .eq('is_active', true)
 
@@ -346,20 +346,21 @@ async function runSync(
   let extracted: any[] = []
   for (let i = 0; i < emailPayloads.length; i += CHUNK_SIZE) {
     const chunk = emailPayloads.slice(i, i + CHUNK_SIZE)
-    const results = await extractOrdersFromEmails(chunk.map(e => e.text))
-    extracted = extracted.concat(results)
+    const results = await extractOrdersFromEmails(chunk.map(e => e.text), chunk.map(e => e.platform))
+    const categoryMap = chunk.map(e => e.category)
+    const resultsWithCategory = results.map((r: any, idx: number) => ({
+      ...r,
+      category: categoryMap[idx] || r.category || 'shopping'
+    }))
+    extracted = extracted.concat(resultsWithCategory)
     if (i + CHUNK_SIZE < emailPayloads.length) {
       await new Promise(r => setTimeout(r, 1000))
     }
   }
   const enriched = extracted.map((order: any) => ({
-    ...order,
-    category: order.platform === 'zomato' ? 'restaurant'
-            : order.platform === 'amazon' ? 'shopping'
-            : order.platform === 'blinkit' ? 'grocery'
-            : order.platform === 'nykaa' || order.platform === 'nykaa man' ? 'shopping'
-            : 'shopping',
-  }))
+      ...order,
+      category: order.category || 'shopping',
+    }))
 
   const { saved, skipped } = await saveOrders(supabase, homeId, userId, enriched)
 
@@ -437,20 +438,21 @@ async function runHistorySync(
     let extracted: any[] = []
     for (let i = 0; i < emailPayloads.length; i += CHUNK_SIZE) {
       const chunk = emailPayloads.slice(i, i + CHUNK_SIZE)
-      const results = await extractOrdersFromEmails(chunk.map(e => e.text))
-      extracted = extracted.concat(results)
+      const results = await extractOrdersFromEmails(chunk.map(e => e.text), chunk.map(e => e.platform))
+      const categoryMap = chunk.map(e => e.category)
+      const resultsWithCategory = results.map((r: any, idx: number) => ({
+        ...r,
+        category: categoryMap[idx] || r.category || 'shopping'
+      }))
+      extracted = extracted.concat(resultsWithCategory)
       if (i + CHUNK_SIZE < emailPayloads.length) {
         await new Promise(r => setTimeout(r, 1000))
       }
     }
     const enriched = extracted.map((order: any) => ({
-      ...order,
-      category: order.platform === 'zomato' ? 'restaurant'
-              : order.platform === 'amazon' ? 'shopping'
-              : order.platform === 'blinkit' ? 'grocery'
-              : order.platform === 'nykaa' || order.platform === 'nykaa man' ? 'shopping'
-              : 'shopping',
-    }))
+        ...order,
+        category: order.category || 'shopping',
+      }))
     const result = await saveOrders(supabase, homeId, userId, enriched)
     saved = result.saved
     skipped = result.skipped
