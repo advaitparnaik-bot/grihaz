@@ -471,6 +471,7 @@ async function runHistorySync(
 // ─── Action handlers ──────────────────────────────────────────────────────────
 
 async function handleConnect(supabase: any, body: any, userId: string) {
+  console.log('[handleConnect] called, userId:', userId)
   const { code, home_id, redirect_uri } = body
   if (!code || !home_id || !redirect_uri) throw new Error('Missing code, home_id, or redirect_uri')
 
@@ -482,21 +483,28 @@ async function handleConnect(supabase: any, body: any, userId: string) {
     headers: { Authorization: `Bearer ${tokens.access_token}` }
   })
   const userinfo     = userinfoRes.ok ? await userinfoRes.json() : {}
+  console.log('[handleConnect] userinfoRes status:', userinfoRes.status, 'ok:', userinfoRes.ok)
   const gmailAddress = userinfo.email || null
+  console.log('[handleConnect] userinfo:', JSON.stringify(userinfo), 'gmailAddress:', gmailAddress)
 
   // Upsert — one row per (home_id, user_id)
   const { error } = await supabase
-    .from('home_gmail_connections')
-    .upsert({
-      home_id:        home_id,
-      user_id:        userId,
-      gmail_address:  gmailAddress,
-      refresh_token:  tokens.refresh_token,
-      last_synced_at: null,
-      connected_at:   new Date().toISOString(),
-    }, { onConflict: 'home_id,user_id' })
-
-  if (error) throw error
+      .from('home_gmail_connections')
+      .upsert({
+        home_id:        home_id,
+        user_id:        userId,
+        gmail_address:  gmailAddress,
+        refresh_token:  tokens.refresh_token,
+        last_synced_at: null,
+        connected_at:   new Date().toISOString(),
+      }, { onConflict: 'home_id,user_id', ignoreDuplicates: false })
+    if (error) throw error
+    // Explicitly update gmail_address in case upsert didn't set it
+    await supabase
+      .from('home_gmail_connections')
+      .update({ gmail_address: gmailAddress })
+      .eq('home_id', home_id)
+      .eq('user_id', userId)
 
   // Get the connection we just upserted so we can pass it to runSync
   const { data: conn } = await supabase

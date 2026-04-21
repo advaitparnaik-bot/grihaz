@@ -33,7 +33,7 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
   function handleConnectGmail() {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
     const redirectUri = `${window.location.origin}/auth/gmail/callback`
-    const scope = 'https://www.googleapis.com/auth/gmail.readonly'
+    const scope = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email'
     const state = JSON.stringify({ home_id: home.id, user_id: user.id })
     const params = new URLSearchParams({
       client_id: clientId,
