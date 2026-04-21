@@ -473,7 +473,7 @@ async function runHistorySync(
 // ─── Action handlers ──────────────────────────────────────────────────────────
 
 async function handleConnect(supabase: any, body: any, userId: string) {
-  console.log('[handleConnect] called, userId:', userId)
+  
   const { code, home_id, redirect_uri } = body
   if (!code || !home_id || !redirect_uri) throw new Error('Missing code, home_id, or redirect_uri')
 
@@ -485,9 +485,8 @@ async function handleConnect(supabase: any, body: any, userId: string) {
     headers: { Authorization: `Bearer ${tokens.access_token}` }
   })
   const userinfo     = userinfoRes.ok ? await userinfoRes.json() : {}
-  console.log('[handleConnect] userinfoRes status:', userinfoRes.status, 'ok:', userinfoRes.ok)
+
   const gmailAddress = userinfo.email || null
-  console.log('[handleConnect] userinfo:', JSON.stringify(userinfo), 'gmailAddress:', gmailAddress)
 
   // Upsert — one row per (home_id, user_id)
   const { error } = await supabase
