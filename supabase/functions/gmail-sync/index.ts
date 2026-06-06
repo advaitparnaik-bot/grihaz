@@ -539,25 +539,25 @@ async function handleSync(supabase: any, body: any, userId: string) {
   return runSync(supabase, conn, home_id, userId)
 }
 
-async function handleSyncAll(supabase: any, body: any) {
-  // Called by pg_cron — syncs ALL member connections for a home
-  const { home_id } = body
+async function handleSyncAll(supabase: any) {
+  // Called by pg_cron — syncs ALL stale Gmail connections across all homes
+  const staleThreshold = new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
 
   const { data: connections, error } = await supabase
     .from('home_gmail_connections')
-    .select('id, user_id, refresh_token, last_synced_at')
-    .eq('home_id', home_id)
+    .select('id, home_id, user_id, refresh_token, last_synced_at')
+    .or(`last_synced_at.is.null,last_synced_at.lt.${staleThreshold}`)
 
   if (error) throw error
-  if (!connections?.length) return { message: 'No Gmail connections for this home', results: [] }
+  if (!connections?.length) return { message: 'No stale connections to sync', results: [] }
 
   const results = []
   for (const conn of connections) {
     try {
-      const result = await runSync(supabase, conn, home_id, conn.user_id)
-      results.push({ user_id: conn.user_id, ...result })
+      const result = await runSync(supabase, conn, conn.home_id, conn.user_id)
+      results.push({ home_id: conn.home_id, user_id: conn.user_id, ...result })
     } catch (err: any) {
-      results.push({ user_id: conn.user_id, error: err.message })
+      results.push({ home_id: conn.home_id, user_id: conn.user_id, error: err.message })
     }
   }
   return { results }
@@ -617,29 +617,31 @@ Deno.serve(async (req) => {
     if (!authHeader) throw new Error('Missing Authorization header')
 
     const supabase = getAdminClient()
-
-    const body = await req.json()      // ← move this UP
-
-    const token = authHeader.replace('Bearer ', '')
-    const base64Payload = token.split('.')[1]
-    const payload = JSON.parse(atob(base64Payload))
-    const userId = payload.sub || body.user_id    // ← add fallback
-    if (!userId) throw new Error('Unauthorized')
-
-    const user = { id: userId }
-
+    const body = await req.json()
     const action = body.action
 
     let result
-    switch (action) {
-      case 'connect':    result = await handleConnect(supabase, body, user.id);    break
-      case 'sync':       result = await handleSync(supabase, body, user.id);       break
-      case 'sync-all':   result = await handleSyncAll(supabase, body);             break
-      case 'sync-history': result = await handleSyncHistory(supabase, body, user.id); break
-      case 'disconnect': result = await handleDisconnect(supabase, body, user.id); break
-      case 'status':     result = await handleStatus(supabase, body, user.id);     break
-      default:           throw new Error(`Unknown action: ${action}`)
-      
+
+    // pg_cron uses the service role key directly — no JWT to decode
+    if (action === 'sync-all') {
+      // Called by pg_cron — admin client already enforces service role access
+      result = await handleSyncAll(supabase)
+    } else {
+      // All other actions require a valid user JWT
+      const token = authHeader.replace('Bearer ', '')
+      const base64Payload = token.split('.')[1]
+      const payload = JSON.parse(atob(base64Payload))
+      const userId = payload.sub || body.user_id
+      if (!userId) throw new Error('Unauthorized')
+
+      switch (action) {
+        case 'connect':      result = await handleConnect(supabase, body, userId);      break
+        case 'sync':         result = await handleSync(supabase, body, userId);         break
+        case 'sync-history': result = await handleSyncHistory(supabase, body, userId);  break
+        case 'disconnect':   result = await handleDisconnect(supabase, body, userId);   break
+        case 'status':       result = await handleStatus(supabase, body, userId);       break
+        default:             throw new Error(`Unknown action: ${action}`)
+      }
     }
 
     return new Response(JSON.stringify(result), {

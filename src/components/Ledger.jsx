@@ -60,6 +60,8 @@ export default function Ledger() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [platformFilter, setPlatformFilter] = useState('all')
+  const [memberFilter, setMemberFilter] = useState('all')
+  const [homeMembers, setHomeMembers] = useState([])
 
   // Edit state
   const [editEntry, setEditEntry] = useState(null)
@@ -70,7 +72,7 @@ export default function Ledger() {
   useEffect(() => { loadHome() }, [])
   useEffect(() => {
     if (homeId) loadEntries()
-  }, [homeId, period, customFrom, customTo, typeFilter, staffFilter, statusFilter, categoryFilter, platformFilter])
+  }, [homeId, period, customFrom, customTo, typeFilter, staffFilter, statusFilter, categoryFilter, platformFilter, memberFilter])
 
   async function loadHome() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -82,6 +84,22 @@ export default function Ledger() {
     const { data: sources } = await supabase.from('expense_email_sources')
       .select('platform, category').eq('home_id', data.home_id).eq('is_active', true)
     setEmailSources(sources || [])
+
+    const { data: membersData } = await supabase
+      .from('home_members')
+      .select('user_id')
+      .eq('home_id', data.home_id)
+
+    const memberUserIds = (membersData || []).map(m => m.user_id)
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', memberUserIds)
+
+    setHomeMembers((membersData || []).map(m => ({
+      user_id: m.user_id,
+      display_name: profilesData?.find(p => p.id === m.user_id)?.display_name || 'Unknown',
+    })))
   }
 
   async function loadEntries() {
@@ -99,12 +117,13 @@ export default function Ledger() {
 
       // Load staff entries
       if (typeFilter === 'all' || typeFilter === 'staff') {
-        let adhocQuery = supabase.from('adhoc_entries')
+       let adhocQuery = supabase.from('adhoc_entries')
           .select('*, staff(name, role)')
           .eq('home_id', homeId)
           .gte('date', from).lte('date', to)
           .order('date', { ascending: false })
         if (staffFilter !== 'all') adhocQuery = adhocQuery.eq('staff_id', staffFilter)
+        if (memberFilter !== 'all') adhocQuery = adhocQuery.eq('created_by', memberFilter)
 
         let attQuery = supabase.from('attendance')
           .select('*, staff(name, role, pay_type, daily_rate, monthly_rate)')
@@ -112,6 +131,7 @@ export default function Ledger() {
           .gte('date', from).lte('date', to)
           .order('date', { ascending: false })
         if (staffFilter !== 'all') attQuery = attQuery.eq('staff_id', staffFilter)
+        if (memberFilter !== 'all') attQuery = attQuery.eq('marked_by', memberFilter)
 
         const { data: settlements } = await supabase.from('settlements')
           .select('staff_id, month').eq('home_id', homeId)
@@ -120,12 +140,15 @@ export default function Ledger() {
 
         const [{ data: adhocData }, { data: attData }] = await Promise.all([adhocQuery, attQuery])
 
+       const memberNameMap = Object.fromEntries(homeMembers.map(m => [m.user_id, m.display_name]))
+
         const adhocMapped = (adhocData || []).map(e => ({
           id: e.id, staff_id: e.staff_id, type: 'adhoc', date: e.date,
           staff_name: e.staff?.name || '—', staff_role: e.staff?.role || '',
           description: e.description, amount: e.amount,
           entry_type: e.type, settled: e.settled,
           settlement_mode: e.settlement_mode, settlement: e.settlement,
+          by_name: memberNameMap[e.created_by] || null,
           raw: e,
         }))
 
@@ -140,6 +163,7 @@ export default function Ledger() {
             description: e.status === 'present' ? 'Present' : e.status === 'absent_paid' ? 'Absent (Paid)' : 'Absent (Unpaid)',
             amount, entry_type: e.status, settled: isSettled,
             settlement_mode: null, settlement: isSettled ? 'settled' : 'outstanding',
+            by_name: memberNameMap[e.marked_by] || null,
             raw: e,
           }
         })
@@ -159,14 +183,17 @@ export default function Ledger() {
 
         if (categoryFilter !== 'all') expQuery = expQuery.eq('category', categoryFilter)
         if (platformFilter !== 'all') expQuery = expQuery.eq('platform', platformFilter)
+        if (memberFilter !== 'all') expQuery = expQuery.eq('created_by', memberFilter)
 
         const { data: expData } = await expQuery
 
+        const memberNameMap2 = Object.fromEntries(homeMembers.map(m => [m.user_id, m.display_name]))
         expenseEntries = (expData || []).map(e => ({
           id: e.id, type: 'expense', date: e.order_date,
           platform: e.platform, category: e.category,
           order_ref: e.order_ref, amount: Number(e.order_total) || 0,
           items: e.expense_order_items || [],
+          by_name: memberNameMap2[e.created_by] || null,
           raw: e,
         }))
       }
@@ -346,9 +373,26 @@ export default function Ledger() {
           </div>
         )}
 
+        {/* Member filter */}
+        <div className="tr-filter-group">
+          <label>Member</label>
+          <div className="tr-chip-row">
+            <button className={`tr-chip ${memberFilter === 'all' ? 'tr-chip--active' : ''}`}
+              onClick={() => setMemberFilter('all')}>All</button>
+            {homeMembers.map(m => (
+              <button key={m.user_id}
+                className={`tr-chip ${memberFilter === m.user_id ? 'tr-chip--active' : ''}`}
+                onClick={() => setMemberFilter(m.user_id)}>
+                {m.display_name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Type filter */}
         <div className="tr-filter-group">
           <label>Type</label>
+
           <div className="tr-chip-row">
             {[
               { value: 'all', label: 'All' },
@@ -496,6 +540,7 @@ export default function Ledger() {
                     <div className="tr-card-body">
                       <div className="tr-staff">{e.platform.charAt(0).toUpperCase() + e.platform.slice(1)}</div>
                       {e.order_ref && <div className="tr-desc">Order #{e.order_ref}</div>}
+                      {e.by_name && <div className="tr-desc tr-by">by {e.by_name}</div>}
                       {expanded && e.items.length > 0 && (
                         <div className="tr-items">
                           {e.items.map(item => (
@@ -536,6 +581,7 @@ export default function Ledger() {
                   <div className="tr-card-body">
                     <div className="tr-staff">{e.staff_name}{e.staff_role ? ` · ${e.staff_role}` : ''}</div>
                     <div className="tr-desc">{e.description}</div>
+                    {e.by_name && <div className="tr-desc tr-by">by {e.by_name}</div>}
                     {e.settlement_mode && <div className="tr-mode">{e.settlement_mode.toUpperCase()}</div>}
                   </div>
                   <div className="tr-card-right">

@@ -111,3 +111,18 @@
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+.set-spends-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+.set-spends-row--member {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.set-settled-by {
+  opacity: 0.7;
+}
