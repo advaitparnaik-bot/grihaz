@@ -81,10 +81,11 @@ export default function Settlement() {
   const [settling, setSettling] = useState(null)
   const [settleForm, setSettleForm] = useState({ amount: '', mode: 'cash' })
   const [saving, setSaving] = useState(false)
-  const [expenseTotal, setExpenseTotal] = useState({ total: 0, byCategory: {} })
+  const [expenseTotal, setExpenseTotal] = useState({ total: 0, byCategory: {}, byMember: {} })
   const [laundryData, setLaundryData] = useState({ transactions: [], total: 0, settlement: null })
   const [settlingLaundry, setSettlingLaundry] = useState(false)
   const [laundrySettleForm, setLaundrySettleForm] = useState({ amount: '', mode: 'cash' })
+  const [homeMembers, setHomeMembers] = useState({})
 
   useEffect(() => { if (homeId) { loadSummaries(); loadExpenses(); loadLaundry() } }, [homeId, selectedMonth])
   useEffect(() => { loadHome() }, [])
@@ -92,7 +93,24 @@ export default function Settlement() {
   async function loadHome() {
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('home_members').select('home_id').eq('user_id', user.id).single()
-    if (data) setHomeId(data.home_id)
+    if (data) {
+      setHomeId(data.home_id)
+
+      const { data: membersData } = await supabase
+        .from('home_members')
+        .select('user_id')
+        .eq('home_id', data.home_id)
+
+      const memberUserIds = (membersData || []).map(m => m.user_id)
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', memberUserIds)
+
+      const memberMap = {}
+      ;(profilesData || []).forEach(p => { memberMap[p.id] = p.display_name })
+      setHomeMembers(memberMap)
+    }
   }
 
   async function loadSummaries() {
@@ -181,7 +199,7 @@ async function loadExpenses() {
 
   const { data } = await supabase
     .from('expense_orders')
-    .select('category, order_total')
+    .select('category, order_total, created_by')
     .eq('home_id', homeId)
     .gte('order_date', firstDay)
     .lte('order_date', lastDay)
@@ -189,12 +207,16 @@ async function loadExpenses() {
   if (!data) return
   let total = 0
   const byCategory = {}
+  const byMember = {}
   for (const order of data) {
     const amt = Number(order.order_total) || 0
     total += amt
     byCategory[order.category] = (byCategory[order.category] || 0) + amt
+    if (order.created_by) {
+      byMember[order.created_by] = (byMember[order.created_by] || 0) + amt
+    }
   }
-  setExpenseTotal({ total, byCategory })
+  setExpenseTotal({ total, byCategory, byMember })
 }
 
 async function loadLaundry() {
@@ -322,6 +344,17 @@ async function loadLaundry() {
               <span>₹{Math.round(amt).toLocaleString('en-IN')}</span>
             </div>
           ))}
+          {Object.keys(expenseTotal.byMember).length > 1 && (
+            <>
+              <div className="set-spends-divider" />
+              {Object.entries(expenseTotal.byMember).map(([userId, amt]) => (
+                <div key={userId} className="set-spends-row set-spends-row--member">
+                  <span>{homeMembers[userId] || 'Unknown'}</span>
+                  <span>₹{Math.round(amt).toLocaleString('en-IN')}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -377,6 +410,9 @@ async function loadLaundry() {
               <div className="set-settled-info">
                 Paid ₹{laundryData.settlement.amount_paid.toLocaleString('en-IN')} via {laundryData.settlement.payment_mode.toUpperCase()}
                 {' · '}{new Date(laundryData.settlement.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                {laundryData.settlement.paid_by && homeMembers[laundryData.settlement.paid_by] && (
+                  <span className="set-settled-by"> · by {homeMembers[laundryData.settlement.paid_by]}</span>
+                )}
               </div>
             ) : (
               <button className="btn-primary set-settle-btn" 
@@ -454,6 +490,9 @@ async function loadLaundry() {
                   <div className="set-settled-info">
                     Paid ₹{summary.settlement.amount.toLocaleString('en-IN')} via {summary.settlement.mode.toUpperCase()}
                     {' · '}{new Date(summary.settlement.settled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    {summary.settlement.settled_by && homeMembers[summary.settlement.settled_by] && (
+                      <span className="set-settled-by"> · by {homeMembers[summary.settlement.settled_by]}</span>
+                    )}
                   </div>
                 ) : (
                   <button className="btn-primary set-settle-btn" onClick={() => openSettle(summary)}>
