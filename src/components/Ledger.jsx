@@ -87,11 +87,18 @@ export default function Ledger() {
 
     const { data: membersData } = await supabase
       .from('home_members')
-      .select('user_id, profiles(display_name)')
+      .select('user_id')
       .eq('home_id', data.home_id)
+
+    const memberUserIds = (membersData || []).map(m => m.user_id)
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', memberUserIds)
+
     setHomeMembers((membersData || []).map(m => ({
       user_id: m.user_id,
-      display_name: m.profiles?.display_name || 'Unknown',
+      display_name: profilesData?.find(p => p.id === m.user_id)?.display_name || 'Unknown',
     })))
   }
 
