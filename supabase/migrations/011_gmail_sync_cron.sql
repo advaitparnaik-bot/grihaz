@@ -17,7 +17,7 @@ select vault.create_secret(
   'GRIHAZ_EDGE_FUNCTION_URL'
 );
 select vault.create_secret(
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1aXV4Ym5ocWJiaHFlYWF2dHNwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkxOTkyNiwiZXhwIjoyMDg5NDk1OTI2fQ.8Mc0967rsAUFFpRTbYxO5XwCLfVL4HI1zujxjP1OsF4',
+  'REPLACE_WITH_PROD_SERVICE_ROLE_KEY',
   'GRIHAZ_SERVICE_ROLE_KEY'
 );
 
