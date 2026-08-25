@@ -33,12 +33,12 @@ export default function App() {
     if (invite) localStorage.setItem('invite_token', invite)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      if (session) fetchHome(session.user.id)
+      if (session) { setHomeLoading(true); fetchHome(session.user.id) }
       else setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
-      if (event === 'SIGNED_IN' && session) fetchHome(session.user.id)
+      if (event === 'SIGNED_IN' && session) { setHomeLoading(true); fetchHome(session.user.id) }
       if (event === 'SIGNED_OUT') { setHome(null); setLoading(false) }
     })
     return () => subscription.unsubscribe()
