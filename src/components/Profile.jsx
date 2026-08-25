@@ -247,7 +247,7 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
         </div>
 
                        {/* ── Install App ── */}
-                        {!isInstalled && (isIOS || installPrompt) && (
+                        {!isInstalled && (
                   <div className="profile-section">
                     <div className="profile-section-label">Install App</div>
                     <div className="profile-card profile-install-card">
@@ -269,15 +269,34 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
                             </div>
                           </div>
                         </div>
-                      ) : installPrompt ? (
-                        <div className="profile-install-android">
-                          <div className="profile-install-title">Install Grihaz on your device</div>
-                          <div className="profile-install-sub">Get faster access from your home screen — no browser needed.</div>
-                          <button className="profile-install-btn" onClick={handleInstall}>
-                            Add to Home Screen
-                          </button>
-                        </div>
-                      ) : null}
+                                    ) : (
+                <div className="profile-install-android">
+                  <div className="profile-install-title">Add Grihaz to your Home Screen</div>
+                  {installPrompt ? (
+                    <>
+                      <div className="profile-install-sub">Get faster access from your home screen — no browser needed.</div>
+                      <button className="profile-install-btn" onClick={handleInstall}>
+                        Add to Home Screen
+                      </button>
+                    </>
+                  ) : (
+                    <div className="profile-install-steps">
+                      <div className="profile-install-step">
+                        <span className="profile-install-step-num">1</span>
+                        <span>Tap the <strong>⋮ menu</strong> in your browser</span>
+                      </div>
+                      <div className="profile-install-step">
+                        <span className="profile-install-step-num">2</span>
+                        <span>Tap <strong>Install and create shortcut</strong> or <strong>Add to Home Screen</strong></span>
+                      </div>
+                      <div className="profile-install-step">
+                        <span className="profile-install-step-num">3</span>
+                        <span>Tap <strong>Install</strong> to confirm</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
                     </div>
                   </div>
                 )}
