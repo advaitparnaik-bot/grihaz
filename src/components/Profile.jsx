@@ -11,8 +11,34 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
   // showExpensePlatforms is now controlled by App.jsx via props
   const [actionLoading, setActionLoading] = useState(false)
-  const [syncingGmail, setSyncingGmail] = useState(false)
-  const [syncResult, setSyncResult] = useState(null)
+    const [syncingGmail, setSyncingGmail] = useState(false)
+    const [syncResult, setSyncResult] = useState(null)
+    const [installPrompt, setInstallPrompt] = useState(null)
+    const [isInstalled, setIsInstalled] = useState(false)
+    const [isIOS, setIsIOS] = useState(false)
+
+    useEffect(() => {
+      // Check if already installed
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        setIsInstalled(true)
+        return
+      }
+      // Detect iOS
+      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
+      setIsIOS(ios)
+      // Capture Android install prompt
+      const handler = (e) => { e.preventDefault(); setInstallPrompt(e) }
+      window.addEventListener('beforeinstallprompt', handler)
+      return () => window.removeEventListener('beforeinstallprompt', handler)
+    }, [])
+
+    async function handleInstall() {
+      if (!installPrompt) return
+      installPrompt.prompt()
+      const { outcome } = await installPrompt.userChoice
+      if (outcome === 'accepted') setIsInstalled(true)
+      setInstallPrompt(null)
+    }
 
   useEffect(() => {
     fetchGmailConnection()
@@ -220,9 +246,45 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
           </div>
         </div>
 
-        {/* ── Support ── */}
-        <div className="profile-section">
-          <div className="profile-section-label">Support</div>
+                {/* ── Install App ── */}
+                {!isInstalled && (
+                  <div className="profile-section">
+                    <div className="profile-section-label">Install App</div>
+                    <div className="profile-card profile-install-card">
+                      {isIOS ? (
+                        <div className="profile-install-ios">
+                          <div className="profile-install-title">Add Grihaz to your Home Screen</div>
+                          <div className="profile-install-steps">
+                            <div className="profile-install-step">
+                              <span className="profile-install-step-num">1</span>
+                              <span>Tap the <strong>Share</strong> button in Safari <span className="profile-install-share-icon">⎋</span></span>
+                            </div>
+                            <div className="profile-install-step">
+                              <span className="profile-install-step-num">2</span>
+                              <span>Scroll down and tap <strong>Add to Home Screen</strong></span>
+                            </div>
+                            <div className="profile-install-step">
+                              <span className="profile-install-step-num">3</span>
+                              <span>Tap <strong>Add</strong> to confirm</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : installPrompt ? (
+                        <div className="profile-install-android">
+                          <div className="profile-install-title">Install Grihaz on your device</div>
+                          <div className="profile-install-sub">Get faster access from your home screen — no browser needed.</div>
+                          <button className="profile-install-btn" onClick={handleInstall}>
+                            Add to Home Screen
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Support ── */}
+                <div className="profile-section">
+                  <div className="profile-section-label">Support</div>
           <div className="profile-card profile-card--list">
             <a
               className="profile-list-item"
