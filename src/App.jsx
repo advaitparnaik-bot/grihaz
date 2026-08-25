@@ -72,7 +72,7 @@ export default function App() {
   const inviteToken = params.get('invite') || localStorage.getItem('invite_token')
 
   if (!home) {
-    if (inviteToken) return <JoinHome token={inviteToken} user={session.user} onJoined={(home) => { localStorage.removeItem('invite_token'); setHome(home) }} />
+    if (inviteToken) return <JoinHome token={inviteToken} user={session.user} onJoined={(joinedHome) => { localStorage.removeItem('invite_token'); fetchHome(session.user.id) }} />
     return <CreateHome user={session.user} onHomeCreated={setHome} />
   }
 
