@@ -16,7 +16,7 @@ export default function JoinHome({ token, user, onJoined }) {
     setLoading(true)
     const { data, error } = await supabase
       .from('home_invites')
-      .select('id, home_id, expires_at, used_at, homes(name)')
+      .select('id, home_id, expires_at, used_at')
       .eq('token', token)
       .maybeSingle()
 
@@ -52,7 +52,12 @@ export default function JoinHome({ token, user, onJoined }) {
       return
     }
 
-    setInvite(data)
+    const { data: homeData } = await supabase
+      .from('homes')
+      .select('name')
+      .eq('id', data.home_id)
+      .maybeSingle()
+    setInvite({ ...data, home_name: homeData?.name || 'your home' })
     setLoading(false)
   }
 
@@ -82,7 +87,7 @@ export default function JoinHome({ token, user, onJoined }) {
       // Clear the token from the URL
       window.history.replaceState({}, '', '/')
 
-      onJoined({ id: invite.home_id, name: invite.homes.name })
+      onJoined({ id: invite.home_id, name: invite.home_name })
     } catch (err) {
       console.error('Join home error:', err)
       setError('Failed to join home. Please try again.')
@@ -100,7 +105,7 @@ export default function JoinHome({ token, user, onJoined }) {
           <span className="brand-icon">🏠</span>
           <h1>You've been invited</h1>
           {invite
-            ? <p>Join <strong>{invite.homes.name}</strong> on Grihaz</p>
+            ? <p>Join <strong>{invite.home_name}</strong> on Grihaz</p>
             : <p>Invalid invite</p>
           }
         </div>
@@ -109,7 +114,7 @@ export default function JoinHome({ token, user, onJoined }) {
 
         {invite && (
           <button onClick={handleJoin} disabled={joining}>
-            {joining ? 'Joining…' : `Join ${invite.homes.name}`}
+            {joining ? 'Joining…' : `Join ${invite.home_name}`}
           </button>
         )}
 
