@@ -246,8 +246,8 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
           </div>
         </div>
 
-                {/* ── Install App ── */}
-                {!isInstalled && (
+                       {/* ── Install App ── */}
+                        {!isInstalled && (isIOS || installPrompt) && (
                   <div className="profile-section">
                     <div className="profile-section-label">Install App</div>
                     <div className="profile-card profile-install-card">
