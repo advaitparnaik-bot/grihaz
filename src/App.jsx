@@ -86,7 +86,7 @@ export default function App() {
           <span className="top-bar-wordmark">grihaz</span>
         </div>
         <div className="top-bar-right">
-          <span className="top-bar-home-name">{home.name}</span>
+              <span className="top-bar-home-name">{home?.name}</span>
           <button
             className="top-bar-icon-btn"
             onClick={() => setShowProfile(true)}
