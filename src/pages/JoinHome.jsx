@@ -18,7 +18,7 @@ export default function JoinHome({ token, user, onJoined }) {
       .from('home_invites')
       .select('id, home_id, expires_at, used_at, homes(name)')
       .eq('token', token)
-      .single()
+      .maybeSingle()
 
     if (error || !data) {
       setError('This invite link is invalid or has expired.')
@@ -44,7 +44,7 @@ export default function JoinHome({ token, user, onJoined }) {
       .select('id')
       .eq('home_id', data.home_id)
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (existing) {
       setError('You are already a member of this home.')
