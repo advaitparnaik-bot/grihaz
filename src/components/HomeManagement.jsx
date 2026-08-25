@@ -100,7 +100,7 @@ export default function HomeManagement({ onBack }) {
         .select('token')
         .single()
       if (error) throw error
-      const link = `${window.location.origin}/?token=${data.token}`
+      const link = `${window.location.origin}/?invite=${data.token}`
       await navigator.clipboard.writeText(link)
       setInviteCopied(true)
       setTimeout(() => setInviteCopied(false), 3000)

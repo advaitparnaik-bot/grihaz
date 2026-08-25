@@ -29,8 +29,8 @@ export default function App() {
   useEffect(() => {
     // Save invite token to localStorage before auth redirect clears the URL
     const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
-    if (token) localStorage.setItem('invite_token', token)
+    const invite = params.get('invite')
+    if (invite) localStorage.setItem('invite_token', invite)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session) fetchHome(session.user.id)
@@ -69,7 +69,7 @@ export default function App() {
   if (!session) return <Login />
 
   const params = new URLSearchParams(window.location.search)
-  const inviteToken = params.get('token') || localStorage.getItem('invite_token')
+  const inviteToken = params.get('invite') || localStorage.getItem('invite_token')
 
   if (!home) {
     if (inviteToken) return <JoinHome token={inviteToken} user={session.user} onJoined={(home) => { localStorage.removeItem('invite_token'); setHome(home) }} />
