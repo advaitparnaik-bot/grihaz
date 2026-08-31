@@ -3,31 +3,40 @@ import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const [email, setEmail] = useState('')
+  const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async (e) => {
-  e.preventDefault()
-  setLoading(true)
-  setError('')
-
-  const redirectTo = window.location.origin
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: redirectTo,
-    },
-  })
-
-  if (error) {
-    setError(JSON.stringify(error))
-    setLoading(false)
-  } else {
-    setSent(true)
+  async function handleSendOtp(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    })
+    if (error) {
+      setError(JSON.stringify(error))
+    } else {
+      setSent(true)
+    }
     setLoading(false)
   }
+
+  async function handleVerifyOtp(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: 'email',
+    })
+    if (error) {
+      setError('Invalid or expired code. Please try again.')
+    }
+    setLoading(false)
   }
 
   return (
@@ -40,7 +49,7 @@ export default function Login() {
         </div>
 
         {!sent ? (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSendOtp}>
             <label htmlFor="email">Email address</label>
             <input
               id="email"
@@ -53,22 +62,39 @@ export default function Login() {
             />
             {error && <p className="error">{error}</p>}
             <button type="submit" disabled={loading || !email}>
-              {loading ? 'Sending…' : 'Send magic link'}
+              {loading ? 'Sending…' : 'Send code'}
             </button>
-            <p className="hint">
-              We'll email you a link — no password needed.
-            </p>
+            <p className="hint">We'll email you a 6-digit code — no password needed.</p>
           </form>
         ) : (
-          <div className="sent-state">
+          <form onSubmit={handleVerifyOtp}>
             <div className="sent-icon">✉️</div>
-            <h2>Check your inbox</h2>
-            <p>We sent a magic link to <strong>{email}</strong>. Click it to sign in.</p>
-            <button onClick={() => { setSent(false); setEmail('') }} className="secondary">
+            <p>We sent a 6-digit code to <strong>{email}</strong>. Enter it below.</p>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="000000"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              maxLength={6}
+              autoFocus
+              style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.4rem' }}
+            />
+            {error && <p className="error">{error}</p>}
+            <button type="submit" disabled={loading || code.length !== 6}>
+              {loading ? 'Verifying…' : 'Sign in'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSent(false); setCode(''); setError('') }}
+              className="secondary"
+            >
               Use a different email
             </button>
-          </div>
+          </form>
         )}
+
         <p className="login-legal">
           <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
           {' · '}
