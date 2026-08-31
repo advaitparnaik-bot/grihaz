@@ -70,6 +70,7 @@ export default function Login() {
           <form onSubmit={handleVerifyOtp}>
             <div className="sent-icon">✉️</div>
             <p>We sent a 6-digit code to <strong>{email}</strong>. Enter it below.</p>
+            <p className="hint">Can't find it? Check your spam folder.</p>
             <input
               type="text"
               inputMode="numeric"
