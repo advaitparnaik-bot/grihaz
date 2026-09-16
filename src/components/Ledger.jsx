@@ -207,9 +207,9 @@ export default function Ledger() {
         .select(`*, laundry_transaction_items(*)`)
         .eq('home_id', homeId)
         .eq('status', 'closed')
-        .gte('created_at', from)
-        .lte('created_at', to)
-        .order('created_at', { ascending: false })
+        .gte('closed_at', from)
+        .lte('closed_at', to + 'T23:59:59')
+        .order('closed_at', { ascending: false })
 
       // Get unique user IDs to resolve names
       const userIds = [...new Set([
