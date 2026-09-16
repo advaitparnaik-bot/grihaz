@@ -66,7 +66,22 @@ export default function StaffManagement() {
       if (filter === 'inactive') query = query.eq('active', false)
 
       const { data } = await query
-      setStaff(data || [])
+      const staffList = data || []
+
+      // Fetch current contracts for each staff member
+      if (staffList.length) {
+        const { data: contracts } = await supabase
+          .from('staff_contracts')
+          .select('staff_id, effective_from, effective_to')
+          .eq('home_id', memberData.home_id)
+          .is('effective_to', null)
+
+        const contractMap = {}
+        ;(contracts || []).forEach(c => { contractMap[c.staff_id] = c.effective_from })
+        setStaff(staffList.map(s => ({ ...s, contract_start: contractMap[s.id] || null })))
+      } else {
+        setStaff([])
+      }
     } catch (err) { console.error(err) }
     setLoading(false)
   }
@@ -227,6 +242,14 @@ export default function StaffManagement() {
                     <div className="sm-meta-item">
                       <span className="sm-meta-label">Schedule</span>
                       <span className="sm-meta-value">{formatSchedule(s.schedule)}</span>
+                    </div>
+                  )}
+                  {s.contract_start && (
+                    <div className="sm-meta-item">
+                      <span className="sm-meta-label">Since</span>
+                      <span className="sm-meta-value">
+                        {new Date(s.contract_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
                     </div>
                   )}
                   {s.terminated_at && (
