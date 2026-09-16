@@ -375,14 +375,14 @@ async function loadLaundry() {
 
       <main className="set-main">
         {laundryData.transactions.length > 0 && (
-          <div className={`set-card ${laundryData.settlement ? 'set-card--settled' : ''}`}>
+          <div className={`set-card ${laundryData.settlement && Math.round(laundryData.total) - Math.round(laundryData.settlement.amount_paid) <= 0 ? 'set-card--settled' : ''}`}>
             <div className="set-card-top">
               <div className="sm-avatar">🧺</div>
               <div className="sm-info">
                 <div className="sm-name">Laundry</div>
                 <div className="sm-role">{laundryData.transactions.length} drop-off{laundryData.transactions.length > 1 ? 's' : ''} returned</div>
               </div>
-              {laundryData.settlement ? (
+              {laundryData.settlement && Math.round(laundryData.total) - Math.round(laundryData.settlement.amount_paid) <= 0 ? (
                 <span className="set-badge set-badge--settled">Settled</span>
               ) : (
                 <span className="set-badge set-badge--outstanding">Outstanding</span>
@@ -407,7 +407,7 @@ async function loadLaundry() {
               </div>
             </div>
 
-            {laundryData.settlement ? (
+            {laundryData.settlement && (
               <div className="set-settled-info">
                 Paid ₹{laundryData.settlement.amount_paid.toLocaleString('en-IN')} via {laundryData.settlement.payment_mode.toUpperCase()}
                 {' · '}{new Date(laundryData.settlement.paid_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -415,12 +415,18 @@ async function loadLaundry() {
                   <span className="set-settled-by"> · by {homeMembers[laundryData.settlement.paid_by]}</span>
                 )}
               </div>
-            ) : (
-              <button className="btn-primary set-settle-btn" 
-                onClick={() => { setLaundrySettleForm({ amount: Math.round(laundryData.total).toString(), mode: 'cash' }); setSettlingLaundry(true) }}>
-                Settle
-              </button>
             )}
+            {(() => {
+              const outstanding = laundryData.settlement
+                ? Math.round(laundryData.total) - Math.round(laundryData.settlement.amount_paid)
+                : Math.round(laundryData.total)
+              return outstanding > 0 ? (
+                <button className="btn-primary set-settle-btn"
+                  onClick={() => { setLaundrySettleForm({ amount: outstanding.toString(), mode: 'cash' }); setSettlingLaundry(true) }}>
+                  {laundryData.settlement ? `Settle remaining ₹${outstanding.toLocaleString('en-IN')}` : 'Settle'}
+                </button>
+              ) : null
+            })()}
           </div>
         )}
         {loading ? (
