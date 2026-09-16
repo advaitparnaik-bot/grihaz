@@ -123,9 +123,9 @@ export default function Settlement() {
       const lastDayDate = new Date(year, month + 1, 0)
       const lastDay = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth()+1).padStart(2,'0')}-${String(lastDayDate.getDate()).padStart(2,'0')}`
 
-      // Active regular staff
+      // All regular staff (active and terminated)
       const { data: staffData } = await supabase.from('staff')
-        .select('*').eq('home_id', homeId).eq('active', true).eq('staff_type', 'regular')
+        .select('*').eq('home_id', homeId).eq('staff_type', 'regular')
 
       if (!staffData?.length) { setStaffSummaries([]); setLoading(false); return }
 
@@ -185,7 +185,9 @@ export default function Settlement() {
         }
       })
 
-      setStaffSummaries(summaries)
+      setStaffSummaries(summaries.filter(s => 
+        s.contract !== null || s.presentDays > 0 || s.absentPaidDays > 0 || s.absentUnpaidDays > 0 || s.adhocTotal !== 0 || s.settled
+      ))
     } catch (err) { console.error(err) }
     setLoading(false)
   }
