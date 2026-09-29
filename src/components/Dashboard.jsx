@@ -10,6 +10,10 @@ export default function Dashboard({ onNavigate }) {
   const [home, setHome] = useState(null)
   const [staff, setStaff] = useState([])
   const [attendance, setAttendance] = useState({})
+  const [showInfoBanner, setShowInfoBanner] = useState(
+    !localStorage.getItem('auto_attendance_banner_dismissed')
+  )
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -126,8 +130,26 @@ export default function Dashboard({ onNavigate }) {
         </div>
 
         <section className="dash-section">
+          {showInfoBanner && (
+            <div className="dash-auto-banner">
+              <span>🤖 Staff scheduled for today are automatically marked Present at midnight. Tap to change anyone who was absent.</span>
+              <button className="dash-auto-banner-close" onClick={() => {
+                localStorage.setItem('auto_attendance_banner_dismissed', '1')
+                setShowInfoBanner(false)
+              }}>✕</button>
+            </div>
+          )}
           <div className="dash-section-head">
-            <h2>Attendance</h2>
+            <h2>
+              Attendance
+              <button className="dash-info-btn" onClick={() => setShowInfoTooltip(v => !v)}>ℹ️</button>
+            </h2>
+            {showInfoTooltip && (
+              <div className="dash-info-tooltip">
+                Staff scheduled for today are automatically marked Present at midnight. Tap AP or A to change anyone who was absent, then Save.
+                <button className="dash-info-tooltip-close" onClick={() => setShowInfoTooltip(false)}>✕</button>
+              </div>
+            )}
             {scheduledStaff.length > 0 && (
               <button className={`btn-save ${saveSuccess ? 'btn-save--done' : ''}`}
                 onClick={saveAttendance} disabled={saving || markedCount === 0}>

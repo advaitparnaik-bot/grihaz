@@ -267,3 +267,61 @@ body {
   transition: background 0.15s;
 }
 .dash-laundry-btn:hover { background: var(--saffron-dim); }
+.dash-auto-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #FFF8E7;
+  border: 1px solid #F5C842;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.dash-auto-banner-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink);
+  opacity: 0.5;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.dash-info-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  vertical-align: middle;
+}
+
+.dash-info-tooltip {
+  position: absolute;
+  background: var(--ink);
+  color: white;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 260px;
+  z-index: 100;
+  margin-top: 4px;
+}
+
+.dash-info-tooltip-close {
+  display: block;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 0;
+  opacity: 0.7;
+}
