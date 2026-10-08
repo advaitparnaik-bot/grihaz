@@ -307,7 +307,7 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
           <div className="profile-card profile-card--list">
             <a
               className="profile-list-item"
-              href="/faqs"
+              href="https://grihazhome.com/faq/"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -318,7 +318,9 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
             </a>
             <div className="profile-list-divider" />
             <a className="profile-list-item"
-            href="/privacy"
+            href="https://grihazhome.com/privacy/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             <span>Privacy Policy</span>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -328,7 +330,9 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
           <div className="profile-list-divider" />
 
             <a className="profile-list-item"
-            href="/terms"
+            href="https://grihazhome.com/terms/"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             <span>Terms of Service</span>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

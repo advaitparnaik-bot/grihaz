@@ -97,9 +97,9 @@ export default function Login() {
         )}
 
         <p className="login-legal">
-          <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+          <a href="https://grihazhome.com/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
           {' · '}
-          <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Use</a>
+          <a href="https://grihazhome.com/terms/" target="_blank" rel="noopener noreferrer">Terms of Use</a>
         </p>
       </div>
     </div>
