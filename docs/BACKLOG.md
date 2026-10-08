@@ -27,7 +27,6 @@ _Last updated: 8 Oct 2026_
 - [ ] Remove `grihaz.rhyea.com` and `staging-grihaz.rhyea.com` from Supabase redirect URLs (dev and prod) and from the `grihaz` Pages project's custom domains. Keep the rhyea.com Redirect Rule until then.
 - [ ] Remove `rhyea.com` from Google Auth Platform → Branding → Authorized domains.
 - [ ] Delete unused `APP_URL` and `GMAIL_REDIRECT_URI` from `gmail-sync` and the `APP_URL` secret on both projects. The redirect URI comes from the frontend's `window.location.origin`.
-- [ ] Remove in-app `src/pages/Privacy.jsx` and `Terms.jsx` (they still say `hello@rhyea.com`); link to `https://grihazhome.com/privacy/` and `/terms/` instead.
 - [ ] Replace website screenshots with a demo home (they show real staff names). Same filenames in `grihaz-site/assets/screens/`.
 
 ## Done
@@ -37,8 +36,10 @@ _Last updated: 8 Oct 2026_
 - Supabase Site URL and redirect URLs updated (dev → staging.grihazhome.com, prod → app.grihazhome.com).
 - Google OAuth client: new origins and redirect URIs added; old rhyea and `pages.dev` entries removed.
 - Pages Preview env: added `VITE_GOOGLE_CLIENT_ID`; removed trailing dot from `VITE_SUPABASE_URL`.
-- FAQ link in `Profile.jsx` made relative (`/faqs`).
 - Website live at `grihazhome.com` (repo `grihaz-site`); see its README.
 - 301 redirects: `www.grihazhome.com`, `grihaz.in`, `grihazhome.in` → grihazhome.com; `grihaz.rhyea.com`, `staging-grihaz.rhyea.com` → app.grihazhome.com.
 - `hello@grihazhome.com` via Cloudflare Email Routing → Gmail.
 - `grihazhome.com` verified in Google Search Console.
+- FAQ page added at `grihazhome.com/faq/`.
+- In-app Privacy and Terms pages removed. Profile and Login link to `grihazhome.com/privacy/`, `/terms/` and `/faq/`; old `/privacy`, `/terms`, `/faqs` URLs on the app redirect there (`SITE_PAGES` in `App.jsx`, which also removed early returns that ran before hooks).
+- Fixed `..lmr-main` selector typo in `LaundryMarkReturns.css`.
