@@ -1,6 +1,8 @@
 # Grihaz — Decisions & Parked Features Log
 
-*Last updated: September 2026*
+*Last updated: 8 October 2026*
+
+Open work lives in [`BACKLOG.md`](BACKLOG.md). This file records what shipped, what's parked, and why things are the way they are.
 
 ---
 
@@ -33,6 +35,13 @@
 - Settle tab — per-member expense breakdown
 - Install App section in Profile (Android + iOS)
 - Home Services expense category added (enum: home_services)
+
+### ✅ Domains & Website (October 2026)
+- App moved to app.grihazhome.com; staging on staging.grihazhome.com
+- Public website at grihazhome.com (separate repo `grihaz-site`): homepage, privacy policy, terms
+- grihaz.in, grihazhome.in, www.grihazhome.com redirect to grihazhome.com; old grihaz.rhyea.com and staging-grihaz.rhyea.com redirect to app.grihazhome.com
+- hello@grihazhome.com contact address
+- Google OAuth branding verification approved and published
 
 ---
 
@@ -69,9 +78,16 @@
 | Invite param | ?invite= | Avoids conflict with Supabase magic link ?token= param |
 | RLS cross-member | get_my_home_id() security definer | Avoids circular RLS dependency |
 | Gmail sync | sync-all + pg_cron | Single nightly call. Vault secrets authenticate. |
+| Gmail redirect URI | Built from `window.location.origin` in the frontend; Edge Function uses the URI sent in the request | Works on any domain registered in the Google OAuth client. `APP_URL` / `GMAIL_REDIRECT_URI` in gmail-sync are unused. |
 | Anthropic model | claude-sonnet-4-6 | claude-sonnet-4-20250514 returned 404 |
-| Email sender | noreply@rhyea.com | Resend free tier. Upgrade to noreply@grihazhome.com pending domain migration. |
-| Dev testing | *.pages.dev URL | Custom domains always map to Cloudflare Production env |
+| Email sender | noreply@rhyea.com (for now) | Shared Resend free account with Suraksha. Moving Grihaz to Brevo or ZeptoMail on grihazhome.com — a second free Resend account would break Resend's Acceptable Use Policy. |
+| Domains | grihazhome.com primary | grihaz.com too expensive. grihaz.in / grihazhome.in are redirects. Registered at GoDaddy, DNS on Cloudflare. |
+| App vs marketing site | app.grihazhome.com (app) + grihazhome.com (site, separate repo and Pages project) | Site changes never touch app deploys. Real homepage needed for Google verification, ad traffic and email reputation. |
+| Staging environment | staging.grihazhome.com → CNAME `staging.grihaz.pages.dev` | Branch alias runs the Preview env (dev Supabase). A custom domain pointed at `grihaz.pages.dev` serves Production — the old staging-grihaz.rhyea.com did this and was running against prod. |
+| Pages environment variables | Production → grihaz-prod; Preview → grihaz-dev | Preview needs every `VITE_` var Production has (incl. `VITE_GOOGLE_CLIENT_ID`). Vars are baked in at build — redeploy after changing them. |
+| Old domain redirects | Cloudflare Redirect Rules (301), edge only | No in-app redirect needed: only one active user at migration time. |
+| Contact email | hello@grihazhome.com | Cloudflare Email Routing → Gmail. Free. |
+| Gmail scope | gmail.readonly (restricted) | Branding verified. Data-access verification needs annual CASA — deferred; receipt-forwarding is the alternative. |
 | Supabase branching | Two free projects | Manual migration sync required |
 | expense_platform_category | PostgreSQL enum | Adding new categories requires ALTER TYPE + code change |
 | Settle tab staff filter | Fetch all staff, filter by contract activity | Shows terminated staff in months they were active; new staff don't appear in pre-contract months |
@@ -79,10 +95,12 @@
 
 ---
 
-## Pending Items
+## Decision History
 
-- [ ] grihazhome.com domain migration (app → app.grihazhome.com, marketing → grihazhome.com)
-- [ ] Resend domain setup for noreply@grihazhome.com (fixes OTP spam issue)
-- [ ] Google OAuth verification (submitted, under review)
-- [ ] Eddie display name "Adie (Eddiekt)" needs update in prod
-- [ ] grihaz.in and grihazhome.in redirects to grihazhome.com
+### 8 Oct 2026 — Domain migration to grihazhome.com
+- **Domains.** grihazhome.com is the primary domain. App at app.grihazhome.com, marketing site at grihazhome.com, staging at staging.grihazhome.com. grihaz.in and grihazhome.in redirect to grihazhome.com.
+- **Staging was pointing at prod.** staging-grihaz.rhyea.com's CNAME targeted `grihaz.pages.dev`, so it served the main build against prod Supabase. Likely left over from when dev and prod shared one database. Fixed by pointing the new staging domain at the branch alias. Dev Supabase Site URL also pointed at the old staging domain; now staging.grihazhome.com.
+- **Preview env was missing `VITE_GOOGLE_CLIENT_ID`**, so Gmail connect on real staging sent `client_id=undefined`. Earlier Gmail testing on dev had worked only from localhost. Also removed a trailing dot from Preview `VITE_SUPABASE_URL`.
+- **Marketing site is a separate repo** (`grihaz-site`), plain HTML/CSS, no build step.
+- **Email.** Grihaz moves off the shared Resend account (AUP forbids extra free accounts to get around limits). Suraksha stays on Resend with rhyea.com.
+- **Google verification.** Earlier branding submission was rejected (thin privacy policy, homepage didn't explain the app, app name mismatch). Resubmitted with grihazhome.com homepage, a detailed privacy policy with a Limited Use statement, and terms — approved and published 8 Oct 2026.
