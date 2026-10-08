@@ -307,7 +307,7 @@ export default function Profile({ user, home, onClose, onNavigate, showExpensePl
           <div className="profile-card profile-card--list">
             <a
               className="profile-list-item"
-              href="https://grihaz.rhyea.com/faqs"
+              href="/faqs"
               target="_blank"
               rel="noopener noreferrer"
             >
