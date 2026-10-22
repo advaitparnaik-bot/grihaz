@@ -9,7 +9,7 @@ _Last updated: 22 Oct 2026_
 - [ ] **Move OTP email off the shared Resend account.** Grihaz and Suraksha both send from `noreply@rhyea.com` on one Resend account; OTPs land in spam. Move Grihaz to Brevo (free, 300/day) or ZeptoMail on `grihazhome.com`. Settings-only change in Supabase SMTP (dev, then prod); no code calls Resend.
   - Edit the existing SPF record on grihazhome.com (`v=spf1 include:_spf.mx.cloudflare.net ~all`) to add the provider. Never add a second SPF record.
   - Update the privacy policy's provider list on grihazhome.com when switching.
-- [ ] **Check Google Auth Platform → Audience → publishing status.** In "Testing", Google expires refresh tokens after 7 days, which silently breaks Gmail sync.
+- [x] **Check Google Auth Platform → Audience → publishing status.** Confirmed "In production" (22 Oct 2026); refresh tokens don't expire. Gmail user cap at 1/100 (lifetime, counts every account that ever connects).
 - [ ] **Update GRIHAZ-BRIEF to v1.9** with the domain migration and website.
 - [ ] **Eddie's display name** shows as "Adie (Eddiekt)" in prod; update it.
 - [ ] **Style the sender email input** in the Add Platform sheet (`ExpensePlatforms.jsx`). It renders as a browser-default input (thin grey border, square corners, small text) instead of matching the Platform Name field.
