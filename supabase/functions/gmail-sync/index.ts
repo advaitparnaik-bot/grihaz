@@ -451,8 +451,10 @@ async function runHistorySync(
     .eq('is_active', true)
 
   const sourceMap: Record<string, { platform: string, category: string }> = {}
+  const platformCategory: Record<string, string> = {}
   for (const s of sources || []) {
     sourceMap[s.sender_email] = { platform: s.platform, category: s.category }
+    platformCategory[s.platform] = s.category
   }
 
   const emailPayloads: { text: string, platform: string, category: string }[] = []
@@ -481,7 +483,7 @@ async function runHistorySync(
       const categoryMap = chunk.map(e => e.category)
       const resultsWithCategory = results.map((r: any, idx: number) => ({
         ...r,
-        category: categoryMap[idx] || r.category || 'shopping'
+        category: platformCategory[r.platform] || categoryMap[idx] || 'shopping'
       }))
       extracted = extracted.concat(resultsWithCategory)
       if (i + CHUNK_SIZE < emailPayloads.length) {
