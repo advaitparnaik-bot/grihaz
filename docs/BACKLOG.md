@@ -2,7 +2,7 @@
 
 Open work, newest decisions first. Update this file as items move: tick them off, move them to **Done**, and record decisions in `DECISIONS.md`.
 
-_Last updated: 8 Oct 2026_
+_Last updated: 22 Oct 2026_
 
 ## Now
 
@@ -12,6 +12,8 @@ _Last updated: 8 Oct 2026_
 - [ ] **Check Google Auth Platform → Audience → publishing status.** In "Testing", Google expires refresh tokens after 7 days, which silently breaks Gmail sync.
 - [ ] **Update GRIHAZ-BRIEF to v1.9** with the domain migration and website.
 - [ ] **Eddie's display name** shows as "Adie (Eddiekt)" in prod; update it.
+- [ ] **Style the sender email input** in the Add Platform sheet (`ExpensePlatforms.jsx`). It renders as a browser-default input (thin grey border, square corners, small text) instead of matching the Platform Name field.
+- [ ] **Close the contract when staff are terminated.** Terminate sets `active = false` and `terminated_at` but leaves the `staff_contracts` row open (`effective_to` null). Settle now works around this (22 Oct), but anything else that reads open contracts will still treat terminated staff as current. Fix: set `effective_to` to the termination date on Terminate, and decide what Reactivate does (reopen the old contract or start a new one).
 
 ## Gmail / Google verification
 
@@ -30,6 +32,14 @@ _Last updated: 8 Oct 2026_
 - [ ] Replace website screenshots with a demo home (they show real staff names). Same filenames in `grihaz-site/assets/screens/`.
 
 ## Done
+
+**22 Oct 2026: Travel category, Uber sync, Settle fix**
+- Travel expense category added (`travel` in `expense_platform_category`, migration 014; `ExpensePlatforms.jsx`, `Ledger.jsx`, `Settlement.jsx`). Uber added as a Travel platform (`noreply@uber.com`).
+- Gmail sync backfills newly added senders: any sender added after the last sync gets a 90-day search on the next sync. Previously a new platform only picked up emails from after the last sync.
+- Ride receipts deduplicated: rides have no order ID, so `order_ref` is built from licence plate + date + fare (`ride:<PLATE>:<date>:<total>`). Other orders without an ID are matched on platform + date + total.
+- Expense category now comes from the platform name, not the email's position in the batch (fixes wrong categories when Claude skips an email). Applies to both `runSync` and `runHistorySync`.
+- Settle tab hides staff terminated before the selected month unless they have attendance, adhoc entries or a settlement in it.
+- Deno CLI and VS Code Deno extension set up locally for `supabase/functions` (`.vscode/settings.json`, gitignored).
 
 **8 Oct 2026: domain migration and website**
 - App moved to `app.grihazhome.com` (prod Supabase); staging on `staging.grihazhome.com` (CNAME → `staging.grihaz.pages.dev`, dev Supabase).

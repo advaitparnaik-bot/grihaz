@@ -1,6 +1,6 @@
 # Grihaz — Decisions & Parked Features Log
 
-*Last updated: 8 October 2026*
+*Last updated: 22 October 2026*
 
 Open work lives in [`BACKLOG.md`](BACKLOG.md). This file records what shipped, what's parked, and why things are the way they are.
 
@@ -18,7 +18,7 @@ Open work lives in [`BACKLOG.md`](BACKLOG.md). This file records what shipped, w
 - Settlement recording — Cash / UPI, per staff per month
 - Multi-member homes — invite flow, member visibility via get_my_home_id()
 - Contract start date visible on staff cards ("Since [date]")
-- Settle tab shows terminated staff in months they were active; hides them in months before contract start
+- Settle tab shows terminated staff in months they were active; hides them in months before contract start and in months after termination
 
 ### ✅ Phase 2 — Laundry Tracker
 - Log drop-offs by category, service type, quantity, unit price
@@ -29,12 +29,14 @@ Open work lives in [`BACKLOG.md`](BACKLOG.md). This file records what shipped, w
 
 ### ✅ Phase 3 (Partial) — Household Expense Tracking
 - Gmail OAuth integration per home member
-- Supported platforms: Blinkit, Zomato, Amazon, Nykaa, Urban Company (Home Services)
+- Supported platforms: Blinkit, Zomato, Amazon, Nykaa, Urban Company (Home Services), Uber (Travel)
 - Nightly pg_cron sync (00:30 UTC) via sync-all Edge Function
 - Ledger tab — member filter + attribution labels
 - Settle tab — per-member expense breakdown
 - Install App section in Profile (Android + iOS)
 - Home Services expense category added (enum: home_services)
+- Travel expense category added (enum: travel, October 2026)
+- Newly added senders backfilled 90 days on next sync; ride receipts deduplicated by licence plate
 
 ### ✅ Domains & Website (October 2026)
 - App moved to app.grihazhome.com; staging on staging.grihazhome.com
@@ -90,13 +92,21 @@ Open work lives in [`BACKLOG.md`](BACKLOG.md). This file records what shipped, w
 | Gmail scope | gmail.readonly (restricted) | Branding verified. Data-access verification needs annual CASA — deferred; receipt-forwarding is the alternative. |
 | Supabase branching | Two free projects | Manual migration sync required |
 | expense_platform_category | PostgreSQL enum | Adding new categories requires ALTER TYPE + code change |
-| Settle tab staff filter | Fetch all staff, filter by contract activity | Shows terminated staff in months they were active; new staff don't appear in pre-contract months |
+| Settle tab staff filter | Fetch all staff, filter by contract activity; staff terminated before the month shown only if they have activity in it | Terminate doesn't close the contract (`effective_to` stays null), so an open contract alone would show terminated staff every month at ₹0 |
+| Gmail sync window | Days since last sync + 1; senders added since the last sync get a 90-day backfill | Without the backfill, a newly added platform never sees its older emails |
+| Orders without an order ID | Rides: `order_ref` = `ride:<PLATE>:<date>:<total>`. Others: match platform + date + total | Sync windows overlap by a day, so the same email is read more than once; without an ID it would be saved twice |
+| Expense category on synced orders | Looked up from the platform name in `expense_email_sources` | Index-based mapping shifted categories when Claude skipped an email in a batch |
 | Laundry Ledger filter | closed_at | Return date is more relevant than drop-off date for period filtering |
 
 ---
 
 ## Decision History
 
+### 22 Oct 2026 — Travel category, Uber sync, Settle fix
+- **Travel category** added (`travel`). Enum first on both projects, then the three component lists; Home Services had failed the other way round.
+- **New platforms missed older emails.** Sync only searched back to the last sync, so Uber (added after the rides) found nothing. Senders created after `last_synced_at` now get a 90-day search. Existing platforms are unaffected.
+- **Ride dedupe uses the licence plate.** Uber receipts carry no order ID but always show the plate. Uber sends one email per ride, but overlapping syncs read the same email twice; the plate + date + fare key catches that.
+- **Terminated staff on Settle.** Root cause is that Terminate doesn't close the contract. Fixed in the Settle filter for now; closing the contract on Terminate is in the backlog.
 ### 8 Oct 2026 — Domain migration to grihazhome.com
 - **Domains.** grihazhome.com is the primary domain. App at app.grihazhome.com, marketing site at grihazhome.com, staging at staging.grihazhome.com. grihaz.in and grihazhome.in redirect to grihazhome.com.
 - **Staging was pointing at prod.** staging-grihaz.rhyea.com's CNAME targeted `grihaz.pages.dev`, so it served the main build against prod Supabase. Likely left over from when dev and prod shared one database. Fixed by pointing the new staging domain at the branch alias. Dev Supabase Site URL also pointed at the old staging domain; now staging.grihazhome.com.
