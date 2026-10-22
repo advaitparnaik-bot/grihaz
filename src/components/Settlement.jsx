@@ -185,9 +185,14 @@ export default function Settlement() {
         }
       })
 
-      setStaffSummaries(summaries.filter(s => 
-        s.contract !== null || s.presentDays > 0 || s.absentPaidDays > 0 || s.absentUnpaidDays > 0 || s.adhocTotal !== 0 || s.settled
-      ))
+      setStaffSummaries(summaries.filter(s => {
+        const hasActivity = s.presentDays > 0 || s.absentPaidDays > 0 || s.absentUnpaidDays > 0 || s.adhocTotal !== 0 || s.settled
+        // Terminating staff doesn't close their contract, so contract alone can't decide.
+        // Hide staff terminated before this month unless they have activity in it.
+        const terminatedBeforeMonth = s.staff.terminated_at && s.staff.terminated_at.slice(0, 10) < firstDay
+        if (terminatedBeforeMonth) return hasActivity
+        return s.contract !== null || hasActivity
+      }))
     } catch (err) { console.error(err) }
     setLoading(false)
   }

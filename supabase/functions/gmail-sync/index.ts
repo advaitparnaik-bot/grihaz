@@ -168,7 +168,8 @@ Schema:
     "items": [
       { "item_name": "string", "quantity": number, "unit": "kg|g|L|pcs|null", "unit_price": number }
     ],
-    "notes": "coupon or discount info or null"
+    "notes": "coupon or discount info or null",
+    "vehicle_plate": "vehicle licence/registration plate for ride receipts (Uber, Ola, Rapido), else null"
   }
 ]
 
@@ -179,6 +180,7 @@ Rules:
 - For order_date: look for explicit order/purchase date in the email body first. If not found, use EMAIL_DATE. Never use shipping, dispatch, or delivery dates.
 - For food/restaurant orders: if item prices not listed, use one item: { item_name: "Food order", quantity: 1, unit: null, unit_price: <total> }
 - For shopping orders: item prices = individual item price, not order total.
+- For ride receipts (Uber, Ola, Rapido): use one item: { item_name: "Ride", quantity: 1, unit: null, unit_price: <total> }. Copy the vehicle licence plate exactly as shown into vehicle_plate.
 
 Emails:
 ---
@@ -219,6 +221,27 @@ async function saveOrders(supabase: any, homeId: string, userId: string, orders:
     }
     const orderDate = order.order_date || new Date().toISOString().split('T')[0]
     const orderTotal = order.order_total || 0
+
+    // Rides have no order ID. Build one from licence plate + date + fare, so re-reading
+    // the same receipt on an overlapping sync is caught by the order_ref check below.
+    if (!order.order_ref && order.vehicle_plate) {
+      const plate = String(order.vehicle_plate).toUpperCase().replace(/[^A-Z0-9]/g, '')
+      if (plate) order.order_ref = `ride:${plate}:${orderDate}:${Number(orderTotal).toFixed(2)}`
+    }
+
+    // Any other order without an ID: same platform, date and total counts as a duplicate.
+    if (!order.order_ref) {
+      const { data: dup } = await supabase
+        .from('expense_orders')
+        .select('id')
+        .eq('home_id', homeId)
+        .eq('platform', order.platform)
+        .eq('order_date', orderDate)
+        .eq('order_total', orderTotal)
+        .limit(1)
+        .maybeSingle()
+      if (dup) { skipped.push(order); continue }
+    }
 
     if (order.order_ref) {
       const { data: existing } = await supabase
@@ -300,12 +323,26 @@ async function runSync(
   const accessToken = await refreshAccessToken(conn.refresh_token)
   const { data: emailSources } = await supabase
     .from('expense_email_sources')
-    .select('sender_email')
+    .select('sender_email, created_at')
     .eq('home_id', homeId)
     .eq('is_active', true)
   const knownSenders = (emailSources || []).map((s: any) => s.sender_email)
   if (!knownSenders.length) return { new_orders: 0, skipped: 0, message: 'No email sources configured' }
   const messages = await searchEmails(accessToken, buildGmailQuery(daysBack, knownSenders), 50)
+
+  // Senders added since the last sync have never been searched — backfill them 90 days.
+  // Without this, a newly added platform only picks up emails from after the previous sync.
+  if (conn.last_synced_at && daysBackOverride === undefined) {
+    const lastSync = new Date(conn.last_synced_at).getTime()
+    const newSenders = (emailSources || [])
+      .filter((s: any) => s.created_at && new Date(s.created_at).getTime() > lastSync)
+      .map((s: any) => s.sender_email)
+    if (newSenders.length) {
+      const backfill = await searchEmails(accessToken, buildGmailQuery(90, newSenders), 50)
+      const seen = new Set(messages.map(m => m.id))
+      for (const m of backfill) if (!seen.has(m.id)) messages.push(m)
+    }
+  }
 
   if (!messages.length) {
     await supabase.from('home_gmail_connections').update({ last_synced_at: new Date().toISOString() }).eq('id', conn.id)
@@ -320,8 +357,10 @@ async function runSync(
     .eq('is_active', true)
 
   const sourceMap: Record<string, { platform: string, category: string }> = {}
+  const platformCategory: Record<string, string> = {}
   for (const s of sources || []) {
     sourceMap[s.sender_email] = { platform: s.platform, category: s.category }
+    platformCategory[s.platform] = s.category
   }
 
   const emailPayloads: { text: string, platform: string, category: string }[] = []
@@ -350,7 +389,7 @@ async function runSync(
     const categoryMap = chunk.map(e => e.category)
     const resultsWithCategory = results.map((r: any, idx: number) => ({
       ...r,
-      category: categoryMap[idx] || r.category || 'shopping'
+      category: platformCategory[r.platform] || categoryMap[idx] || 'shopping'
     }))
     extracted = extracted.concat(resultsWithCategory)
     if (i + CHUNK_SIZE < emailPayloads.length) {
