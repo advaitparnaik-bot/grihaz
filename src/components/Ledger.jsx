@@ -27,6 +27,7 @@ const CATEGORY_LABELS = {
   restaurant: 'Food',
   fashion_apparel: 'Fashion',
   home_services: 'Home Services',
+  travel: 'Travel',
 }
 
 function getDateRange(period, customFrom, customTo) {

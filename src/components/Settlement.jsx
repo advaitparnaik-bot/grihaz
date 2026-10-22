@@ -317,6 +317,7 @@ async function loadLaundry() {
     restaurant: 'Restaurant',
     fashion_apparel: 'Fashion & Apparel',
     home_services: 'Home Services',
+    travel: 'Travel',
   }
 
   return (

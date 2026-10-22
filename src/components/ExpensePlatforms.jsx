@@ -8,6 +8,7 @@ const CATEGORIES = [
   { value: 'restaurant', label: 'Food' },
   { value: 'fashion_apparel', label: 'Fashion' },
   { value: 'home_services', label: 'Home Services' },
+  { value: 'travel', label: 'Travel' },
 ]
 
 export default function ExpensePlatforms({ home, onClose }) {
